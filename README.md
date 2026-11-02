@@ -1,8 +1,9 @@
 # editEZ — video editing, made easy
 
-A studio-grade video editor that runs entirely in your browser. Multi-track timeline,
-colour grading, chroma key, motion keyframes, voiceover recording, subtitles and
-one-click export presets — all local, no account, no upload.
+A CapCut-style video editor that runs in your browser. Multi-track timeline, colour
+grading, chroma key, motion keyframes, voiceover recording, subtitles, one-click export
+presets — plus an optional account that keeps a synced cloud copy of every project.
+White-and-light-blue studio UI in English and Arabic.
 
 Built with **React 18 + TypeScript + Vite + Zustand**, HTML canvas compositing and
 IndexedDB storage.
@@ -61,16 +62,35 @@ frame rate, quality, bitrate, format and filename), real-time progress with canc
 in-browser preview of the result and a download link. WebM (VP9) via `MediaRecorder`; MP4 only
 when the browser exposes an H.264 recorder. The export tab must stay open while rendering.
 
+**Accounts & cloud** — email + password sign-up/sign-in (PBKDF2-SHA256 salted hashes, stored
+locally), a profile and storage panel, automatic mirroring of every save to a per-account cloud
+copy, a *Sync now* action that pulls newer copies back into IndexedDB, and a pluggable sync
+endpoint (Settings → Account) so a Supabase/Firebase/pocketbase REST function can take over.
+Guest mode stays fully usable; projects are simply local-only.
+
+**Look & feel** — a CapCut-style white + light-blue studio theme: filmstrip clips, white/blue
+selection handles, compact track headers, flat blue tool buttons, rounded cards and a soft
+glow behind the hero. The preview stage stays dark, like CapCut's player.
+
 **Bilingual** — complete English and Arabic UI with a full right-to-left layout (`dir="rtl"`,
 logical CSS properties, Arabic-capable fonts), persisted per browser.
 
 ## Honest limits
 
-- **No server.** Video rendering, subtitles, storage and export all happen locally, so there is
-  no cloud sync, no team collaboration and no server-side AI features. Nothing is uploaded.
+- **The account and its cloud copy live in this browser by default.** Sign-up, sign-in, hashed
+  passwords and the mirrored project copies are all stored in the same IndexedDB database, so a
+  new device or a cleared profile starts empty. Real cross-device sync needs a backend: paste its
+  REST endpoint in *Account → Sync endpoint* and the same push/pull calls go over `fetch()`
+  instead (`GET /projects`, `PUT /projects`, `DELETE /projects/:id` with a bearer token). Nothing
+  is uploaded until you configure an endpoint.
+- **Locally stored passwords are a convenience, not hardened identity.** They are salted and
+  PBKDF2-derived, but anyone with access to the browser profile can read the database. Do not
+  reuse an important password.
 - **Storage lives in the browser.** Projects and media are in IndexedDB for this browser/profile.
   Clearing site data removes them — use *Download backup* for anything you want to keep.
   *Request persistent storage* asks the browser to keep the data.
+- **No server-side AI, collaboration or publishing.** Transcription, AI effects and share links
+  are not included; exports are downloaded files.
 - **Automatic speech-to-text is not included.** It needs a paid API or a large on-device model;
   import an SRT/VTT instead (or type cues directly). The subtitle panel says so.
 - **The export codec depends on the browser.** Only formats the browser's `MediaRecorder`
@@ -100,8 +120,11 @@ src/
     templates.ts       demo project + template gallery
     presets.ts         aspects, export presets, fonts, effects, text presets
     db.ts              IndexedDB with in-memory fallback
+    cloud.ts           accounts, password hashing, cloud push/pull adapter
   components/ui.tsx    buttons, fields, sliders, modal, toasts, tips…
   components/editor/   preview, timeline, panels, inspector, top bar
-  pages/               Home, Editor
+  components/AccountMenu.tsx   avatar menu + sync chip
+  components/dialogs/  new project, export, settings, account, onboarding…
+  pages/               Home, Editor, Auth
   styles.css           design system + RTL + responsive layout
 ```

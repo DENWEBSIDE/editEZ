@@ -91,7 +91,12 @@ export type IconName =
   | 'cpu'
   | 'database'
   | 'cursor'
-  | 'split';
+  | 'split'
+  | 'user'
+  | 'cloud'
+  | 'cloudOff'
+  | 'mail'
+  | 'logOut';
 
 const PATHS: Record<IconName, string> = {
   play: 'M8 5.5v13l11-6.5z',
@@ -142,6 +147,11 @@ const PATHS: Record<IconName, string> = {
   eyeOff: 'M3 3l18 18M10.6 6.2A9.6 9.6 0 0112 6c6.4 0 10 6 10 6a17 17 0 01-3 3.6M6.3 7.7A16 16 0 002 12s3.6 6 10 6a9.4 9.4 0 003.5-.7',
   layers: 'M12 3l9 5-9 5-9-5 9-5zM3 13l9 5 9-5M3 17l9 5 9-5',
   cursor: 'M6 3l13 8.5-5.6 1.3L11 19 6 3z',
+  user: 'M12 12a4 4 0 100-8 4 4 0 000 8zM4.5 20a7.5 7.5 0 0115 0',
+  cloud: 'M7.5 18.5h9.2a3.3 3.3 0 00.2-6.6 5.2 5.2 0 00-10-1.2A4 4 0 007.5 18.5z',
+  cloudOff: 'M7.5 18.5h9.2a3.3 3.3 0 00.2-6.6 5.2 5.2 0 00-10-1.2A4 4 0 007.5 18.5zM4 4l16 16',
+  mail: 'M3.5 6.5h17v11h-17zM3.5 7l8.5 6 8.5-6',
+  logOut: 'M14 5H6a1 1 0 00-1 1v12a1 1 0 001 1h8M17 8l4 4-4 4M21 12H10',
   split: 'M4 5h7v14H4zM13 5h7v14h-7zM12 3v18',
   cpu: 'M6 6h12v12H6zM9 9h6v6H9zM9 3v3M15 3v3M9 18v3M15 18v3M3 9h3M3 15h3M18 9h3M18 15h3',
   database: 'M12 3c4.4 0 8 1.3 8 3s-3.6 3-8 3-8-1.3-8-3 3.6-3 8-3zM4 6v6c0 1.7 3.6 3 8 3s8-1.3 8-3V6M4 12v6c0 1.7 3.6 3 8 3s8-1.3 8-3v-6',
@@ -228,7 +238,7 @@ export function Logo({ size = 30 }: { size?: number }) {
       <rect width="32" height="32" rx="9" fill="url(#editez-logo)" />
       <path
         d="M11 9.5v13M11 9.5h10M11 16h7M11 22.5h10"
-        stroke="#0a0b12"
+        stroke="#ffffff"
         strokeWidth="2.6"
         strokeLinecap="round"
         opacity="0.92"

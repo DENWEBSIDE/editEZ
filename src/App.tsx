@@ -2,6 +2,7 @@ import { Component, useEffect, type ErrorInfo, type ReactNode } from 'react';
 import { useStore } from './store';
 import { useDocumentLang, useT } from './i18n';
 import { Home } from './pages/Home';
+import { Auth } from './pages/Auth';
 import { Editor } from './pages/Editor';
 import { Toasts } from './components/Toasts';
 import { NewProjectDialog } from './components/dialogs/NewProjectDialog';
@@ -12,6 +13,7 @@ import { CapabilitiesDialog } from './components/dialogs/CapabilitiesDialog';
 import { RecoveryDialog } from './components/dialogs/RecoveryDialog';
 import { ExportDialog } from './components/dialogs/ExportDialog';
 import { SubsExportDialog } from './components/dialogs/SubsExportDialog';
+import { AccountDialog } from './components/dialogs/AccountDialog';
 import { ConfirmProvider } from './components/ui';
 import { Icon, Logo } from './components/Icons';
 import { Button } from './components/ui';
@@ -99,7 +101,7 @@ function Shell() {
 
   return (
     <>
-      {view === 'editor' && project ? <Editor /> : <Home />}
+      {view === 'editor' && project ? <Editor /> : view === 'auth' ? <Auth /> : <Home />}
       {dialog === 'new' ? <NewProjectDialog /> : null}
       {dialog === 'settings' ? <SettingsDialog /> : null}
       {dialog === 'shortcuts' ? <ShortcutsDialog /> : null}
@@ -108,6 +110,7 @@ function Shell() {
       {dialog === 'recover' ? <RecoveryDialog /> : null}
       {dialog === 'export' && project ? <ExportDialog /> : null}
       {dialog === 'subsExport' ? <SubsExportDialog /> : null}
+      {dialog === 'account' ? <AccountDialog /> : null}
       <Toasts />
     </>
   );

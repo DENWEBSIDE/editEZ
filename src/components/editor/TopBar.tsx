@@ -4,6 +4,7 @@ import { useT } from '../../i18n';
 import { Button, IconButton, Kbd, Tip } from '../ui';
 import { Icon } from '../Icons';
 import { LanguageSwitcher } from '../LanguageSwitcher';
+import { AccountMenu, SyncChip } from '../AccountMenu';
 import { modKey } from '../../lib/format';
 
 interface MenuItem {
@@ -233,6 +234,7 @@ export function TopBar() {
             <IconButton icon="trash" label={t('common.delete')} size="sm" onClick={() => useStore.getState().deleteSelection()} />
           </Tip>
         </div>
+        <SyncChip compact />
         <LanguageSwitcher compact />
         <Tip label={t('shortcuts.title')}>
           <IconButton icon="help" label={t('shortcuts.title')} size="sm" onClick={() => openDialog('shortcuts')} />
@@ -246,6 +248,7 @@ export function TopBar() {
         >
           {t('editor.export')}
         </Button>
+        <AccountMenu />
       </div>
     </header>
   );

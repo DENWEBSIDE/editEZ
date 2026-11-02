@@ -29,11 +29,23 @@ import {
 } from './lib/edits';
 import { downloadBlob, importFile, type ImportOutcome } from './lib/media';
 import { buildTemplate } from './lib/templates';
+import * as cloud from './lib/cloud';
+import type { CloudStats, Session } from './lib/cloud';
 import { TEXT_PRESETS } from './lib/presets';
 import type { TextStyle } from './types';
 
 export type PanelId = 'media' | 'effects' | 'text' | 'audio' | 'subtitles' | 'color' | 'project';
-export type DialogId = null | 'new' | 'export' | 'settings' | 'shortcuts' | 'onboard' | 'capabilities' | 'subsExport' | 'recover';
+export type DialogId =
+  | null
+  | 'new'
+  | 'export'
+  | 'settings'
+  | 'shortcuts'
+  | 'onboard'
+  | 'capabilities'
+  | 'subsExport'
+  | 'recover'
+  | 'account';
 export type MobileTab = 'media' | 'preview' | 'props' | 'timeline';
 export type SaveStatus = 'saved' | 'saving' | 'dirty' | 'error';
 
@@ -72,10 +84,18 @@ export interface CueInput {
 interface State {
   lang: Lang;
   booted: boolean;
-  view: 'home' | 'editor';
+  view: 'home' | 'editor' | 'auth';
   projects: ProjectMeta[];
   projectsLoading: boolean;
   projectsError: string | null;
+
+  session: Session | null;
+  authMode: 'signin' | 'signup';
+  authBusy: boolean;
+  authError: string | null;
+  cloudStatus: 'offline' | 'idle' | 'syncing' | 'synced' | 'error';
+  lastCloudSync: number | null;
+  cloudInfo: CloudStats | null;
 
   project: Project | null;
   assets: Record<string, Asset>;
@@ -120,6 +140,18 @@ interface State {
   setLang: (l: Lang) => void;
   refreshProjects: () => Promise<void>;
   goHome: () => void;
+
+  goAuth: (mode: 'signin' | 'signup') => void;
+  signUpUser: (input: { name: string; email: string; password: string }) => Promise<boolean>;
+  signInUser: (input: { email: string; password: string }) => Promise<boolean>;
+  signOutUser: () => Promise<void>;
+  clearAuthError: () => void;
+  syncNow: (opts?: { silent?: boolean }) => Promise<void>;
+  scheduleCloudSync: () => void;
+  refreshCloud: () => Promise<void>;
+  updateAccountName: (name: string) => Promise<void>;
+  setCloudEndpoint: (url: string | null) => Promise<void>;
+  removeAccount: (password: string) => Promise<boolean>;
   createProject: (opts: { name: string; width: number; height: number; fps?: number; templateId?: string }) => Promise<void>;
   openTemplate: (templateId: string) => Promise<void>;
   openProject: (id: string) => Promise<void>;
@@ -196,6 +228,14 @@ export const registerThumbProvider = (fn: (() => string | undefined) | null) => 
 };
 
 let saveTimer: number | null = null;
+let cloudTimer: number | null = null;
+const scheduleCloudSync = (fn: () => void) => {
+  if (cloudTimer) window.clearTimeout(cloudTimer);
+  cloudTimer = window.setTimeout(() => {
+    cloudTimer = null;
+    fn();
+  }, 1400);
+};
 const assetUrlCache = new Map<string, string>();
 
 const updateMeta = (project: Project) => {
@@ -256,6 +296,14 @@ export const useStore = create<State>((set, get) => {
     projectsLoading: true,
     projectsError: null,
 
+    session: null,
+    authMode: 'signin',
+    authBusy: false,
+    authError: null,
+    cloudStatus: 'offline',
+    lastCloudSync: null,
+    cloudInfo: null,
+
     project: null,
     assets: {},
     luts: {},
@@ -314,8 +362,20 @@ export const useStore = create<State>((set, get) => {
       const tipsSeen = (await db.kvGet<Record<string, boolean>>('tipsSeen')) ?? {};
       setActiveLang(storedLang);
       set({ lang: storedLang, onboardingSeen, favorites, tipsSeen });
+      const session = await cloud.loadSession().catch(() => null);
+      if (session) {
+        const lastSync = await cloud.readLastSync(session.accountId).catch(() => null);
+        set({
+          session,
+          cloudStatus: 'idle',
+          lastCloudSync: lastSync,
+          authMode: 'signin',
+        });
+        await cloud.pullIntoLocal(session).catch(() => ({ pulled: 0, conflicts: 0 }));
+      }
       await get().refreshProjects();
       void get().refreshStorage();
+      if (session) void get().refreshCloud();
       set({ booted: true });
     },
 
@@ -500,6 +560,11 @@ export const useStore = create<State>((set, get) => {
       await db.deleteProject(id);
       if (get().project?.id === id) set({ project: null, view: 'home' });
       await get().refreshProjects();
+      const session = get().session;
+      if (session) {
+        await cloud.cloudDelete(session, id).catch(() => undefined);
+        void get().refreshCloud();
+      }
       get().toast('success', t('home.deleted'));
       void get().refreshStorage();
     },
@@ -589,6 +654,7 @@ export const useStore = create<State>((set, get) => {
         set({ saveStatus: 'saved', lastSavedAt: Date.now() });
         void get().refreshProjects();
         void get().refreshStorage();
+        get().scheduleCloudSync();
       } catch (e) {
         set({ saveStatus: 'error' });
         const name = e instanceof Error ? e.name : '';
@@ -1175,6 +1241,123 @@ export const useStore = create<State>((set, get) => {
         await get().refreshProjects();
       } catch {
         get().toast('error', t('settings.restoreError'));
+      }
+    },
+
+    /* ------------------------------------------------- accounts + cloud */
+    scheduleCloudSync: () => {
+      if (!get().session) return;
+      scheduleCloudSync(() => {
+        void get().syncNow({ silent: true });
+      });
+    },
+
+    goAuth: (mode) => set({ view: 'auth', authMode: mode, authError: null, playing: false }),
+
+    clearAuthError: () => set({ authError: null }),
+
+    signUpUser: async (input) => {
+      set({ authBusy: true, authError: null });
+      try {
+        const session = await cloud.signUp(input);
+        set({ session, authBusy: false, cloudStatus: 'idle', view: 'home' });
+        history.replaceState(null, '', location.pathname + location.search);
+        await get().syncNow({ silent: true });
+        await get().refreshProjects();
+        get().toast('success', t('auth.welcome', { name: session.name }));
+        return true;
+      } catch (e) {
+        const code = e instanceof cloud.AuthError ? e.message : 'unknown';
+        set({ authBusy: false, authError: t(`auth.err.${code}`) });
+        return false;
+      }
+    },
+
+    signInUser: async (input) => {
+      set({ authBusy: true, authError: null });
+      try {
+        const session = await cloud.signIn(input);
+        set({ session, authBusy: false, cloudStatus: 'idle', view: 'home' });
+        history.replaceState(null, '', location.pathname + location.search);
+        await get().syncNow({ silent: true });
+        await get().refreshProjects();
+        get().toast('success', t('auth.welcomeBack', { name: session.name }));
+        return true;
+      } catch (e) {
+        const code = e instanceof cloud.AuthError ? e.message : 'unknown';
+        set({ authBusy: false, authError: t(`auth.err.${code}`) });
+        return false;
+      }
+    },
+
+    signOutUser: async () => {
+      await cloud.signOut();
+      set({ session: null, cloudStatus: 'offline', lastCloudSync: null, cloudInfo: null, dialog: null });
+      get().toast('info', t('auth.signedOut'));
+    },
+
+    syncNow: async (opts = {}) => {
+      const session = get().session;
+      if (!session) return;
+      set({ cloudStatus: 'syncing' });
+      try {
+        const local = await db.listProjects();
+        const docs = [] as cloud.CloudDoc[];
+        for (const meta of local) {
+          const stored = await db.getProject(meta.id);
+          if (stored) docs.push(cloud.toCloudDoc(stored.doc, stored.thumb));
+        }
+        await cloud.cloudPush(session, docs);
+        const pulled = await cloud.pullIntoLocal(session);
+        const at = Date.now();
+        await cloud.writeLastSync(session.accountId, at);
+        set({ cloudStatus: 'synced', lastCloudSync: at });
+        await get().refreshCloud();
+        if (pulled.pulled && !opts.silent) {
+          await get().refreshProjects();
+          get().toast('success', t('cloud.pulled', { n: pulled.pulled }));
+        }
+      } catch (e) {
+        set({ cloudStatus: 'error' });
+        if (!opts.silent) get().toast('error', t('cloud.syncFailed'));
+      }
+    },
+
+    refreshCloud: async () => {
+      const session = get().session;
+      if (!session) {
+        set({ cloudInfo: null });
+        return;
+      }
+      const info = await cloud.cloudStats(session).catch(() => null);
+      set({ cloudInfo: info });
+    },
+
+    updateAccountName: async (name) => {
+      const session = await cloud.updateProfile({ name });
+      if (session) {
+        set({ session });
+        get().toast('success', t('account.saved'));
+      }
+    },
+
+    setCloudEndpoint: async (url) => {
+      await cloud.setEndpoint(url);
+      await get().refreshCloud();
+      get().toast('info', t('account.endpointSaved'));
+    },
+
+    removeAccount: async (password) => {
+      const session = get().session;
+      if (!session) return false;
+      try {
+        await cloud.deleteAccount(session.accountId, password);
+        set({ session: null, cloudStatus: 'offline', cloudInfo: null, lastCloudSync: null, dialog: null });
+        get().toast('success', t('account.deleted'));
+        return true;
+      } catch {
+        get().toast('error', t('auth.err.bad-password'));
+        return false;
       }
     },
 

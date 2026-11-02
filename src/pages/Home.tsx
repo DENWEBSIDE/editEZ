@@ -2,7 +2,8 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { useStore } from '../store';
 import { useT } from '../i18n';
 import { LanguageSwitcher } from '../components/LanguageSwitcher';
-import { Badge, Button, EmptyState, IconButton, Modal, Note, SearchInput, TextInput, useConfirm } from '../components/ui';
+import { AccountMenu, SyncChip } from '../components/AccountMenu';
+import { Badge, Button, EmptyState, Modal, Note, SearchInput, TextInput, useConfirm } from '../components/ui';
 import { Icon, Logo } from '../components/Icons';
 import { TEMPLATES, DEMO_ID } from '../lib/templates';
 import { formatBytes, formatRelative, formatTimeShort } from '../lib/format';
@@ -10,10 +11,13 @@ import type { ProjectMeta } from '../types';
 
 function ProjectCard({ meta }: { meta: ProjectMeta }) {
   const t = useT();
+  const lang = useStore((s) => s.lang);
+  const session = useStore((s) => s.session);
   const openProject = useStore((s) => s.openProject);
   const deleteProject = useStore((s) => s.deleteProject);
   const duplicateProject = useStore((s) => s.duplicateProject);
   const downloadBackup = useStore((s) => s.downloadBackup);
+  const syncNow = useStore((s) => s.syncNow);
   const [menu, setMenu] = useState(false);
   const [renaming, setRenaming] = useState(false);
   const [name, setName] = useState(meta.name);
@@ -34,57 +38,112 @@ function ProjectCard({ meta }: { meta: ProjectMeta }) {
     };
   }, [menu]);
 
+  const rename = () => {
+    const project = useStore.getState().project;
+    if (project?.id === meta.id) {
+      useStore.getState().renameProject(name);
+    } else {
+      void (async () => {
+        const db = await import('../lib/db');
+        const stored = await db.getProject(meta.id);
+        if (stored) {
+          await db.saveProject({ ...stored.doc, name: name.trim() || stored.name });
+          await useStore.getState().refreshProjects();
+        }
+      })();
+    }
+  };
+
   return (
     <>
-      <article className="pcard">
-        <button type="button" className="pcard-open" onClick={() => void openProject(meta.id)} aria-label={`${t('common.open')} ${meta.name}`}>
-          <span className="pcard-thumb" style={{ backgroundImage: meta.thumb ? `url(${meta.thumb})` : undefined }}>
-            {!meta.thumb ? (
-              <span className="pcard-thumb-fallback">
-                <Logo size={34} />
-              </span>
-            ) : null}
-            <span className="pcard-duration mono">{formatTimeShort(meta.duration || 0)}</span>
-          </span>
-          <span className="pcard-info">
-            <span className="pcard-name">{meta.name}</span>
-            <span className="pcard-meta">
-              {formatRelative(meta.updatedAt, useStore.getState().lang, t)} · {t('home.clipCount', { n: meta.clipCount ?? 0 })}
+      <article className="project-card">
+        <div
+          className="project-thumb"
+          role="button"
+          tabIndex={0}
+          onClick={() => void openProject(meta.id)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+              e.preventDefault();
+              void openProject(meta.id);
+            }
+          }}
+          aria-label={`${t('common.open')} ${meta.name}`}
+          style={meta.thumb ? { backgroundImage: `url(${meta.thumb})`, backgroundSize: 'cover' } : undefined}
+        >
+          {!meta.thumb ? (
+            <span className="project-thumb-art" aria-hidden="true">
+              <span />
+              <span />
+              <span />
             </span>
+          ) : null}
+          <span className="project-play">
+            <Icon name="play" size={10} /> {formatTimeShort(meta.duration || 0)}
           </span>
-        </button>
-        <div className="pcard-menu-wrap" ref={menuRef}>
+          <span className={`project-cloud ${session ? '' : 'is-local'}`} title={session ? t('cloud.synced') : t('cloud.local')}>
+            <Icon name={session ? 'cloud' : 'cloudOff'} size={12} />
+          </span>
           <button
             type="button"
-            className="pcard-menu-btn"
+            className={`project-more ${menu ? 'is-open' : ''}`}
             aria-label={t('common.more')}
             aria-expanded={menu}
-            onClick={() => setMenu((m) => !m)}
+            onClick={(e) => {
+              e.stopPropagation();
+              setMenu((m) => !m);
+            }}
           >
-            <Icon name="more" size={16} />
+            <Icon name="more" size={15} />
           </button>
+        </div>
+
+        <div className="project-card-body">
+          <div className="pcard-title">
+            <span>{meta.name}</span>
+          </div>
+          <div className="project-meta">
+            <span>{formatRelative(meta.updatedAt, lang, t)}</span>
+            <span className="dot" />
+            <span>{t('home.clipCount', { n: meta.clipCount ?? 0 })}</span>
+          </div>
+          <div className="project-card-actions">
+            <Button size="sm" variant="primary" icon="play" onClick={() => void openProject(meta.id)}>
+              {t('home.open')}
+            </Button>
+            <Button size="sm" variant="ghost" icon="download" onClick={() => void downloadBackup(meta.id)} aria-label={t('settings.backup')} />
+          </div>
+        </div>
+
+        <div ref={menuRef}>
           {menu ? (
-            <div className="menu" role="menu">
-              <button role="menuitem" onClick={() => { setMenu(false); void openProject(meta.id); }}>
+            <div className="menu-pop" role="menu">
+              <button role="menuitem" className="menu-item" onClick={() => { setMenu(false); void openProject(meta.id); }}>
                 <Icon name="folder" size={15} />
-                {t('common.open')}
+                <span className="menu-label">{t('common.open')}</span>
               </button>
-              <button role="menuitem" onClick={() => { setMenu(false); setName(meta.name); setRenaming(true); }}>
+              <button role="menuitem" className="menu-item" onClick={() => { setMenu(false); setName(meta.name); setRenaming(true); }}>
                 <Icon name="edit" size={15} />
-                {t('common.rename')}
+                <span className="menu-label">{t('common.rename')}</span>
               </button>
-              <button role="menuitem" onClick={() => { setMenu(false); void duplicateProject(meta.id); }}>
+              <button role="menuitem" className="menu-item" onClick={() => { setMenu(false); void duplicateProject(meta.id); }}>
                 <Icon name="duplicate" size={15} />
-                {t('common.duplicate')}
+                <span className="menu-label">{t('common.duplicate')}</span>
               </button>
-              <button role="menuitem" onClick={() => { setMenu(false); void downloadBackup(meta.id); }}>
+              <button role="menuitem" className="menu-item" onClick={() => { setMenu(false); void downloadBackup(meta.id); }}>
                 <Icon name="download" size={15} />
-                {t('settings.backup')}
+                <span className="menu-label">{t('settings.backup')}</span>
               </button>
+              {session ? (
+                <button role="menuitem" className="menu-item" onClick={() => { setMenu(false); void syncNow(); }}>
+                  <Icon name="refresh" size={15} />
+                  <span className="menu-label">{t('account.syncNow')}</span>
+                </button>
+              ) : null}
               <div className="menu-sep" />
               <button
                 role="menuitem"
-                className="is-danger"
+                className="menu-item is-danger"
                 onClick={() => {
                   setMenu(false);
                   confirm({
@@ -97,12 +156,13 @@ function ProjectCard({ meta }: { meta: ProjectMeta }) {
                 }}
               >
                 <Icon name="trash" size={15} />
-                {t('common.delete')}
+                <span className="menu-label">{t('common.delete')}</span>
               </button>
             </div>
           ) : null}
         </div>
       </article>
+
       {renaming ? (
         <Modal
           title={t('common.rename')}
@@ -116,19 +176,7 @@ function ProjectCard({ meta }: { meta: ProjectMeta }) {
               <Button
                 variant="primary"
                 onClick={() => {
-                  const project = useStore.getState().project;
-                  if (project?.id === meta.id) {
-                    useStore.getState().renameProject(name);
-                  } else {
-                    void (async () => {
-                      const db = await import('../lib/db');
-                      const stored = await db.getProject(meta.id);
-                      if (stored) {
-                        await db.saveProject({ ...stored.doc, name: name.trim() || stored.name });
-                        await useStore.getState().refreshProjects();
-                      }
-                    })();
-                  }
+                  rename();
                   setRenaming(false);
                 }}
               >
@@ -146,10 +194,12 @@ function ProjectCard({ meta }: { meta: ProjectMeta }) {
 
 function ProjectSkeleton() {
   return (
-    <div className="pcard pcard-skeleton" aria-hidden="true">
+    <div className="project-skeleton" aria-hidden="true">
       <div className="skel skel-thumb" />
-      <div className="skel skel-line" />
-      <div className="skel skel-line short" />
+      <div className="skel-body">
+        <div className="skel" style={{ height: 12, width: '70%' }} />
+        <div className="skel" style={{ height: 10, width: '45%' }} />
+      </div>
     </div>
   );
 }
@@ -160,10 +210,10 @@ function TemplateCard({ template }: { template: (typeof TEMPLATES)[number] }) {
   const busy = useStore((s) => s.busy);
   const [starting, setStarting] = useState(false);
   return (
-    <article className="tcard">
+    <article className="tpl-card">
       <button
         type="button"
-        className="tcard-art"
+        className="tpl-art"
         style={{ background: template.art }}
         onClick={() => {
           setStarting(true);
@@ -172,24 +222,21 @@ function TemplateCard({ template }: { template: (typeof TEMPLATES)[number] }) {
         disabled={!!busy}
         aria-label={`${t('home.useTemplate')} — ${t(template.name)}`}
       >
-        <span className="tcard-art-inner">
-          <span className="tcard-glyph" aria-hidden="true">
+        <span className="tpl-art-inner">
+          <span className="tpl-glyph" aria-hidden="true">
             <Icon name={template.h === template.w ? 'grid' : template.h > template.w ? 'film' : 'monitor'} size={22} />
           </span>
-          <span className="tcard-aspect mono">
+          <span className="tpl-aspect mono">
             {template.w}×{template.h}
           </span>
         </span>
-        <span className="tcard-hover">
-          {starting ? <Icon name="refresh" size={16} className="spin" /> : <Icon name="plus" size={16} />}
+        <span className="tpl-hover">
+          {starting ? <Icon name="refresh" size={15} className="spin" /> : <Icon name="plus" size={15} />}
           {starting ? t('demo.loading') : t('home.useTemplate')}
         </span>
       </button>
-      <div className="tcard-body">
-        <div className="tcard-head">
-          <h3>{t(template.name)}</h3>
-          <Badge tone="neutral">{t(template.tag)}</Badge>
-        </div>
+      <div className="tpl-body">
+        <h3>{t(template.name)}</h3>
         <p>{t(template.desc)}</p>
       </div>
     </article>
@@ -202,13 +249,18 @@ export function Home() {
   const projects = useStore((s) => s.projects);
   const loading = useStore((s) => s.projectsLoading);
   const error = useStore((s) => s.projectsError);
-  const openDialog = useStore((s) => s.openDialog);
-  const openTemplate = useStore((s) => s.openTemplate);
+  const session = useStore((s) => s.session);
+  const cloudInfo = useStore((s) => s.cloudInfo);
   const storage = useStore((s) => s.storage);
   const busy = useStore((s) => s.busy);
+  const openDialog = useStore((s) => s.openDialog);
+  const openTemplate = useStore((s) => s.openTemplate);
+  const goAuth = useStore((s) => s.goAuth);
   const refreshProjects = useStore((s) => s.refreshProjects);
+  const importFiles = useStore((s) => s.importFiles);
   const [query, setQuery] = useState('');
   const [tag, setTag] = useState<string>('all');
+  const fileRef = useRef<HTMLInputElement>(null);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -222,46 +274,66 @@ export function Home() {
   }, []);
 
   const shownTemplates = tag === 'all' ? TEMPLATES : TEMPLATES.filter((tp) => tp.tag === tag);
-
   const storagePct = storage.quota > 0 ? Math.min(100, (storage.usage / storage.quota) * 100) : 0;
+  const totalClips = projects.reduce((n, p) => n + (p.clipCount ?? 0), 0);
 
   return (
     <div className="home">
       <header className="home-top">
-        <div className="home-brand">
-          <Logo size={30} />
-          <div>
-            <p className="home-brand-name">editEZ</p>
-            <p className="home-brand-sub">{t('app.tagline')}</p>
-          </div>
-        </div>
+        <button type="button" className="brand" onClick={() => void refreshProjects()}>
+          <span className="brand-mark">
+            <Logo size={22} />
+          </span>
+          <span className="brand-text">
+            <span className="brand-name">editEZ</span>
+            <span className="brand-tag">{t('app.tagline')}</span>
+          </span>
+        </button>
+
+        <nav className="home-nav" aria-label={t('home.recent')}>
+          <button type="button" className="is-active">
+            {t('nav.home')}
+          </button>
+          <button
+            type="button"
+            onClick={() => document.getElementById('templates-heading')?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
+          >
+            {t('nav.templates')}
+          </button>
+        </nav>
+
         <div className="home-top-actions">
-          <button type="button" className="link-btn" onClick={() => openDialog('capabilities')}>
-            <Icon name="shield" size={15} />
-            <span>{t('home.learnMoreCap')}</span>
-          </button>
-          <button type="button" className="link-btn" onClick={() => openDialog('onboard')}>
-            <Icon name="help" size={15} />
-            <span>{t('common.help')}</span>
-          </button>
-          <LanguageSwitcher />
+          <SyncChip />
+          <LanguageSwitcher compact />
+          <Button variant="primary" size="sm" icon="plus" onClick={() => openDialog('new')}>
+            {t('home.newProject')}
+          </Button>
+          <AccountMenu />
         </div>
       </header>
 
-      <main>
-        <section className="hero">
-          <div className="hero-glow" aria-hidden="true" />
-          <div className="hero-grid-bg" aria-hidden="true" />
-          <div className="hero-content">
-            <span className="hero-badge">
-              <span className="dot" />
-              {t('home.badge')}
+      <main className="home-body">
+        {!session ? (
+          <div className="home-guest-banner">
+            <Icon name="cloudOff" size={16} />
+            <span>{t('home.guestBanner')}</span>
+            <Button size="sm" variant="secondary" icon="user" onClick={() => goAuth('signup')}>
+              {t('home.guestBannerCta')}
+            </Button>
+          </div>
+        ) : null}
+
+        <section className="home-hero">
+          <div className="home-hero-copy">
+            <span className="badge badge-accent">
+              <Icon name="sparkles" size={12} />
+              {session ? t('cloud.synced') : t('home.badge')}
             </span>
-            <h1 className="hero-title">
-              {t('home.title1')} <span className="hero-accent">{t('home.titleAccent')}</span>
+            <h1>
+              {t('home.title1')} <em>{t('home.titleAccent')}</em>
             </h1>
-            <p className="hero-sub">{t('home.subtitle')}</p>
-            <div className="hero-cta">
+            <p>{t('home.subtitle')}</p>
+            <div className="home-hero-actions">
               <Button variant="primary" size="lg" icon="plus" onClick={() => openDialog('new')}>
                 {t('home.newProject')}
               </Button>
@@ -275,57 +347,95 @@ export function Home() {
                 {t('home.tryDemo')}
               </Button>
             </div>
-            <ul className="hero-chips">
-              <li>
-                <Icon name="shield" size={14} /> {t('home.feature.privacy')}
-              </li>
-              <li>
-                <Icon name="film" size={14} /> {t('home.feature.timeline')}
-              </li>
-              <li>
-                <Icon name="download" size={14} /> {t('home.feature.export')}
-              </li>
-            </ul>
+            <div className="home-hero-stats">
+              <div className="home-hero-stat">
+                <strong>{projects.length}</strong>
+                <span>{t('home.stats.projects')}</span>
+              </div>
+              <div className="home-hero-stat">
+                <strong>{totalClips}</strong>
+                <span>{t('home.stats.clips')}</span>
+              </div>
+              <div className="home-hero-stat">
+                <strong>{cloudInfo?.projects ?? 0}</strong>
+                <span>{t('home.stats.cloud')}</span>
+              </div>
+            </div>
           </div>
-          <div className="hero-visual" aria-hidden="true">
-            <div className="mock">
-              <div className="mock-top">
-                <span className="mock-dot" />
-                <span className="mock-dot" />
-                <span className="mock-dot" />
-                <span className="mock-pill">{t('preview.title')}</span>
+          <div className="home-hero-art" aria-hidden="true">
+            <div className="hero-mock">
+              <div className="hero-mock-screen">
+                <Icon name="play" size={26} />
               </div>
-              <div className="mock-stage">
-                <div className="mock-frame">
-                  <span className="mock-play">
-                    <Icon name="play" size={18} />
-                  </span>
-                </div>
-              </div>
-              <div className="mock-timeline">
-                {[
-                  ['#ffb245', 26],
-                  ['#5b6cff', 44],
-                  ['#a06bff', 18],
-                  ['#22c9a0', 34],
-                ].map(([color, size], i) => (
-                  <div className="mock-row" key={i}>
-                    <span className="mock-clip" style={{ background: color as string, width: `${size as number}%` }} />
-                    <span className="mock-clip" style={{ background: color as string, width: `${100 - (size as number) - 10}%`, opacity: 0.55 }} />
-                  </div>
-                ))}
-                <div className="mock-playhead" />
+              <div className="hero-mock-lanes">
+                <span className="hero-mock-lane" />
+                <span className="hero-mock-lane l2" />
+                <span className="hero-mock-lane l3" />
               </div>
             </div>
           </div>
         </section>
 
+        <section className="home-section" aria-label={t('home.quickTitle')}>
+          <div className="quick-grid">
+            <button type="button" className="quick-card" onClick={() => openDialog('new')}>
+              <span className="quick-icon">
+                <Icon name="plus" size={18} />
+              </span>
+              <span className="quick-copy">
+                <span className="quick-title">{t('home.quickNew')}</span>
+                <span className="quick-sub">{t('home.quickNewSub')}</span>
+              </span>
+            </button>
+            <button type="button" className="quick-card is-alt" onClick={() => void openTemplate(DEMO_ID)}>
+              <span className="quick-icon">
+                <Icon name="sparkles" size={18} />
+              </span>
+              <span className="quick-copy">
+                <span className="quick-title">{t('home.quickDemo')}</span>
+                <span className="quick-sub">{t('home.quickDemoSub')}</span>
+              </span>
+            </button>
+            <button type="button" className="quick-card" onClick={() => fileRef.current?.click()}>
+              <span className="quick-icon">
+                <Icon name="upload" size={18} />
+              </span>
+              <span className="quick-copy">
+                <span className="quick-title">{t('home.quickImport')}</span>
+                <span className="quick-sub">{t('home.quickImportSub')}</span>
+              </span>
+            </button>
+            <button
+              type="button"
+              className="quick-card is-alt"
+              onClick={() => (session ? openDialog('account') : goAuth('signup'))}
+            >
+              <span className="quick-icon">
+                <Icon name={session ? 'cloud' : 'user'} size={18} />
+              </span>
+              <span className="quick-copy">
+                <span className="quick-title">{session ? t('home.quickCloud') : t('auth.signUp')}</span>
+                <span className="quick-sub">{session ? t('home.quickCloudSub') : t('home.cloudCardDesc')}</span>
+              </span>
+            </button>
+          </div>
+          <input
+            ref={fileRef}
+            type="file"
+            multiple
+            accept="video/*,audio/*,image/*"
+            hidden
+            onChange={(e) => {
+              if (e.target.files?.length) void importFiles(e.target.files);
+              e.target.value = '';
+            }}
+          />
+        </section>
+
         <section className="home-section" aria-labelledby="recent-heading">
-          <div className="section-head-row">
-            <div>
-              <h2 id="recent-heading">{t('home.recent')}</h2>
-              <p className="section-sub">{t('home.recentSub')}</p>
-            </div>
+          <div className="home-section-head">
+            <h2 id="recent-heading">{t('home.recent')}</h2>
+            <span className="count">{filtered.length}</span>
             <div className="section-tools">
               <SearchInput value={query} onChange={setQuery} placeholder={t('home.search')} />
               <Button variant="secondary" icon="plus" onClick={() => openDialog('new')}>
@@ -345,7 +455,7 @@ export function Home() {
             </Note>
           ) : null}
 
-          <div className="projects-grid">
+          <div className="project-grid">
             {loading ? (
               <>
                 <ProjectSkeleton />
@@ -355,38 +465,35 @@ export function Home() {
             ) : filtered.length ? (
               filtered.map((meta) => <ProjectCard key={meta.id} meta={meta} />)
             ) : projects.length && query ? (
-              <EmptyState icon="search" title={t('home.searchEmpty', { q: query })} compact />
+              <div className="project-empty">
+                <EmptyState icon="search" title={t('home.searchEmpty', { q: query })} compact />
+              </div>
+            ) : !projects.length && !error ? (
+              <div className="project-empty">
+                <EmptyState
+                  icon="film"
+                  title={t('home.emptyTitle')}
+                  description={t('home.emptyDesc')}
+                  action={
+                    <>
+                      <Button variant="primary" icon="plus" onClick={() => openDialog('new')}>
+                        {t('home.emptyCta')}
+                      </Button>
+                      <Button variant="ghost" icon="sparkles" onClick={() => void openTemplate(DEMO_ID)}>
+                        {t('home.tryDemo')}
+                      </Button>
+                    </>
+                  }
+                />
+              </div>
             ) : null}
           </div>
-
-          {!loading && !projects.length && !error ? (
-            <div className="home-empty">
-              <EmptyState
-                icon="film"
-                title={t('home.emptyTitle')}
-                description={t('home.emptyDesc')}
-                action={
-                  <>
-                    <Button variant="primary" icon="plus" onClick={() => openDialog('new')}>
-                      {t('home.emptyCta')}
-                    </Button>
-                    <Button variant="ghost" icon="sparkles" onClick={() => void openTemplate(DEMO_ID)}>
-                      {t('home.tryDemo')}
-                    </Button>
-                  </>
-                }
-              />
-            </div>
-          ) : null}
         </section>
 
         <section className="home-section" aria-labelledby="templates-heading">
-          <div className="section-head-row">
-            <div>
-              <h2 id="templates-heading">{t('home.templates')}</h2>
-              <p className="section-sub">{t('home.templatesSub')}</p>
-            </div>
-            <div className="chip-row" role="tablist" aria-label={t('media.filters')}>
+          <div className="home-section-head">
+            <h2 id="templates-heading">{t('home.templates')}</h2>
+            <div className="chip-row chip-row-scroll section-tools" role="tablist" aria-label={t('media.filters')}>
               {tags.map((item) => (
                 <button
                   key={item}
@@ -401,69 +508,92 @@ export function Home() {
               ))}
             </div>
           </div>
-          <div className="templates-grid">
+          <div className="tpl-grid">
             {shownTemplates.map((template) => (
               <TemplateCard key={template.id} template={template} />
             ))}
           </div>
         </section>
 
-        <section className="home-section">
-          <h2>{t('home.featuresTitle')}</h2>
-          <div className="feature-grid">
-            {[
-              { icon: 'layers', title: 'home.feature.timeline', desc: 'home.feature.timelineDesc' },
-              { icon: 'palette', title: 'home.feature.color', desc: 'home.feature.colorDesc' },
-              { icon: 'text', title: 'home.feature.text', desc: 'home.feature.textDesc' },
-              { icon: 'waveform', title: 'home.feature.audio', desc: 'home.feature.audioDesc' },
-              { icon: 'download', title: 'home.feature.export', desc: 'home.feature.exportDesc' },
-              { icon: 'shield', title: 'home.feature.privacy', desc: 'home.feature.privacyDesc' },
-            ].map((feature) => (
-              <div className="feature-card" key={feature.title}>
-                <span className="feature-icon">
-                  <Icon name={feature.icon as never} size={18} />
-                </span>
-                <h3>{t(feature.title)}</h3>
-                <p>{t(feature.desc)}</p>
+        <section className="home-panels">
+          <div className="panel-card">
+            <div className="panel-card-head">
+              <span className="panel-card-icon">
+                <Icon name="database" size={17} />
+              </span>
+              <div>
+                <h2>{t('home.storageCard')}</h2>
+                <p>{t('home.storageCardDesc')}</p>
               </div>
-            ))}
-          </div>
-        </section>
-
-        <section className="home-section storage-card">
-          <div className="storage-copy">
-            <h2>{t('home.storage')}</h2>
-            <p>{t('home.storageDesc')}</p>
+            </div>
             {storage.supported ? (
-              <div className="storage-usage">
-                <div className="storage-bar">
+              <>
+                <div className="meter">
                   <span style={{ width: `${Math.max(1.5, storagePct)}%` }} />
                 </div>
-                <p className="storage-line">
+                <p className="meter-line">
                   {t('home.storageUsage', { used: formatBytes(storage.usage), total: formatBytes(storage.quota) })}
                 </p>
-              </div>
+              </>
             ) : (
-              <p className="storage-line muted">{t('home.storageUnknown')}</p>
+              <p className="meter-line muted">{t('home.storageUnknown')}</p>
             )}
+            <div className="panel-card-actions">
+              <Button size="sm" variant="secondary" icon="settings" onClick={() => openDialog('settings')}>
+                {t('home.manage')}
+              </Button>
+              <Button size="sm" variant="ghost" icon="shield" onClick={() => openDialog('capabilities')}>
+                {t('common.capability')}
+              </Button>
+            </div>
           </div>
-          <div className="storage-actions">
-            <Button variant="secondary" icon="settings" onClick={() => openDialog('settings')}>
-              {t('settings.storage')}
-            </Button>
-            <Button variant="ghost" icon="shield" onClick={() => openDialog('capabilities')}>
-              {t('common.capability')}
-            </Button>
+
+          <div className="panel-card">
+            <div className="panel-card-head">
+              <span className="panel-card-icon is-alt">
+                <Icon name={session ? 'cloud' : 'cloudOff'} size={17} />
+              </span>
+              <div>
+                <h2>{t('home.cloudCardTitle')}</h2>
+                <p>{t('home.cloudCardDesc')}</p>
+              </div>
+            </div>
+            <div className="cloud-facts">
+              <span>
+                <b>{cloudInfo?.projects ?? 0}</b> {t('account.projects')}
+              </span>
+              <span>
+                <b>{formatBytes(cloudInfo?.bytes ?? 0)}</b> {t('account.bytes')}
+              </span>
+            </div>
+            <div className="panel-card-actions">
+              {session ? (
+                <Button size="sm" variant="primary" icon="user" onClick={() => openDialog('account')}>
+                  {t('account.title')}
+                </Button>
+              ) : (
+                <>
+                  <Button size="sm" variant="primary" icon="user" onClick={() => goAuth('signup')}>
+                    {t('auth.signUp')}
+                  </Button>
+                  <Button size="sm" variant="ghost" onClick={() => goAuth('signin')}>
+                    {t('auth.signIn')}
+                  </Button>
+                </>
+              )}
+            </div>
           </div>
         </section>
-      </main>
 
-      <footer className="home-foot">
-        <p>{t('home.footerNote')}</p>
-        <p className="home-foot-meta">
-          editEZ · {t('app.demo')} · {lang === 'ar' ? 'يعمل محليًا' : 'Local-first'}
-        </p>
-      </footer>
+        <footer className="home-foot">
+          <p>{t('home.footer')}</p>
+          <div className="home-foot-meta">
+            <span>{lang === 'ar' ? 'يعمل محليًا أولًا' : 'Local-first'}</span>
+            <span className="dot" />
+            <span>{t('app.demo')}</span>
+          </div>
+        </footer>
+      </main>
     </div>
   );
 }
