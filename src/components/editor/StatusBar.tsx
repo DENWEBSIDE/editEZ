@@ -48,6 +48,9 @@ export function StatusBar() {
           {t(`editor.${saveStatus === 'dirty' ? 'unsaved' : saveStatus === 'saving' ? 'saving' : saveStatus === 'error' ? 'saveError' : 'saved'}`)}
         </span>
         <span className="sb-item hide-sm">{t(`preview.quality.${previewQuality}`)}</span>
+        <span className="sb-credit hide-sm">
+          © {new Date().getFullYear()} Youssef Mosbeh
+        </span>
         <span className="sb-zoom">
           <button type="button" onClick={() => setZoom(clamp(zoom / 1.4, 8, 400))} aria-label={t('timeline.zoomOut')}>
             −

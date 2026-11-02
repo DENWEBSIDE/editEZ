@@ -68,9 +68,17 @@ copy, a *Sync now* action that pulls newer copies back into IndexedDB, and a plu
 endpoint (Settings → Account) so a Supabase/Firebase/pocketbase REST function can take over.
 Guest mode stays fully usable; projects are simply local-only.
 
-**Look & feel** — a CapCut-style white + light-blue studio theme: filmstrip clips, white/blue
-selection handles, compact track headers, flat blue tool buttons, rounded cards and a soft
-glow behind the hero. The preview stage stays dark, like CapCut's player.
+**Look & feel** — a CapCut-style studio with two skins: **white + light blue** (default) and a
+**dark cinema** mode. Both are toggled from the home header, the editor top bar or Settings →
+Appearance, and remembered per browser. Filmstrip clips, always-visible track lock/eye/mute
+controls, a draggable preview/timeline split, flat blue tool buttons and rounded cards in both
+skins. The preview stage stays dark, like CapCut's player.
+
+**One-tap looks & animation presets** — twelve graded filters (Cinematic, Golden hour, Neon,
+Vintage film, Noir, Dreamy, Pop, Faded, Infrared, VHS, Comic, Frost) that apply a grade plus an
+effect stack in one click, seven new effects (invert, solarize, colour tint, pixelate, emboss,
+scanlines, light leak) on top of the existing library, and seven ready-made animated titles
+(neon, pop-bold, typewriter, quote card, name sticker, end-card CTA, glitch).
 
 **Bilingual** — complete English and Arabic UI with a full right-to-left layout (`dir="rtl"`,
 logical CSS properties, Arabic-capable fonts), persisted per browser.
@@ -98,6 +106,9 @@ logical CSS properties, Arabic-capable fonts), persisted per browser.
   roughly real time because frames are rendered on the main thread.
 - **Microphone access needs permission** and a user gesture; recordings are mono WAV from the
   selected input. Noise reduction is a gentle gate, not a full restoration suite.
+- **Branding is built in.** The home footer, the editor status chip and the status bar carry
+  “© Youssef Mosbeh”. It is a credit line, not a licence manager — remove it in `Home.tsx`,
+  `Editor.tsx` and `StatusBar.tsx` if you fork the project.
 - **Demo media is generated at runtime** (canvas-rendered scenes and synthesised audio) so the
   editor can be explored without uploading anything. It is clearly marked as demo content.
 
@@ -121,10 +132,12 @@ src/
     presets.ts         aspects, export presets, fonts, effects, text presets
     db.ts              IndexedDB with in-memory fallback
     cloud.ts           accounts, password hashing, cloud push/pull adapter
+    theme.ts           light/dark theme application + system preference
   components/ui.tsx    buttons, fields, sliders, modal, toasts, tips…
   components/editor/   preview, timeline, panels, inspector, top bar
   components/AccountMenu.tsx   avatar menu + sync chip
   components/dialogs/  new project, export, settings, account, onboarding…
   pages/               Home, Editor, Auth
-  styles.css           design system + RTL + responsive layout
+  styles.css           light design system + RTL + responsive layout + dark-theme addenda
+  styles-dark.css      dark skin: the original CapCut-dark build scoped to [data-theme='dark']
 ```

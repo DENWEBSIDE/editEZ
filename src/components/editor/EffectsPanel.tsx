@@ -3,7 +3,7 @@ import { useStore } from '../../store';
 import { useT } from '../../i18n';
 import { Badge, Button, EmptyState, Note, SearchInput, Slider } from '../ui';
 import { Icon } from '../Icons';
-import { EFFECTS, QUICK_ACTIONS, effectDef, type EffectCategory } from '../../lib/presets';
+import { EFFECTS, LOOKS, QUICK_ACTIONS, effectDef, type EffectCategory, type LookDef } from '../../lib/presets';
 import { getSnapshot } from '../../lib/previewBus';
 import type { Clip, EffectInstance, EffectType } from '../../types';
 import { uid } from '../../types';
@@ -156,6 +156,32 @@ export function EffectsPanel() {
     toast('success', t('effects.added'));
   };
 
+  const applyLook = (look: LookDef) => {
+    if (!clip) {
+      toast('warn', t('effects.needsClip'));
+      return;
+    }
+    if (clip.type === 'audio') {
+      toast('warn', t('effects.limit'));
+      return;
+    }
+    mutate((p) => {
+      for (const track of p.tracks) {
+        const c = track.clips.find((x) => x.id === clip.id);
+        if (!c) continue;
+        if (c.grade) Object.assign(c.grade, look.grade);
+        c.effects = look.effects.map((fx) => {
+          const def = effectDef(fx.type);
+          const params: Record<string, number | string | boolean> = {};
+          for (const pd of def?.params ?? []) params[pd.key] = pd.default;
+          Object.assign(params, fx.params);
+          return { id: uid('fx'), type: fx.type, enabled: true, params };
+        });
+      }
+    });
+    toast('success', t('effects.lookApplied', { name: t(look.label) }));
+  };
+
   const quick = (id: string) => {
     if (!clip) {
       toast('warn', t('effects.needsClip'));
@@ -206,6 +232,29 @@ export function EffectsPanel() {
             <EffectStack clip={clip} />
           </section>
         ) : null}
+
+        <section className="panel-section">
+          <div className="panel-section-head">
+            <h3>{t('effects.looks')}</h3>
+            <span className="fx-count">{t('effects.looksDesc')}</span>
+          </div>
+          <div className="look-grid">
+            {LOOKS.map((look) => (
+              <button
+                key={look.id}
+                type="button"
+                className="look-card"
+                onClick={() => applyLook(look)}
+                title={t(look.desc)}
+                disabled={!clip}
+              >
+                <span className="look-swatch" style={{ background: look.swatch }} aria-hidden="true" />
+                <span className="look-name">{t(look.label)}</span>
+                <span className="look-fx">{t('effects.fxCount', { n: look.effects.length + 1 })}</span>
+              </button>
+            ))}
+          </div>
+        </section>
 
         <SearchInput value={query} onChange={setQuery} placeholder={t('effects.search')} />
         <div className="chip-row chip-row-scroll">

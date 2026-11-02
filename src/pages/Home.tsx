@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { useStore } from '../store';
 import { useT } from '../i18n';
 import { LanguageSwitcher } from '../components/LanguageSwitcher';
+import { ThemeToggle } from '../components/ThemeToggle';
 import { AccountMenu, SyncChip } from '../components/AccountMenu';
 import { Badge, Button, EmptyState, Modal, Note, SearchInput, TextInput, useConfirm } from '../components/ui';
 import { Icon, Logo } from '../components/Icons';
@@ -255,6 +256,7 @@ export function Home() {
   const busy = useStore((s) => s.busy);
   const openDialog = useStore((s) => s.openDialog);
   const openTemplate = useStore((s) => s.openTemplate);
+  const openProject = useStore((s) => s.openProject);
   const goAuth = useStore((s) => s.goAuth);
   const refreshProjects = useStore((s) => s.refreshProjects);
   const importFiles = useStore((s) => s.importFiles);
@@ -303,6 +305,7 @@ export function Home() {
         </nav>
 
         <div className="home-top-actions">
+          <ThemeToggle compact />
           <SyncChip />
           <LanguageSwitcher compact />
           <Button variant="primary" size="sm" icon="plus" onClick={() => openDialog('new')}>
@@ -430,6 +433,32 @@ export function Home() {
               e.target.value = '';
             }}
           />
+        </section>
+
+        <section className="home-steps" aria-labelledby="steps-heading">
+          <div className="home-section-head">
+            <h2 id="steps-heading">{t('home.stepsTitle')}</h2>
+            <span className="count">{t('home.stepsSub')}</span>
+          </div>
+          <div className="steps-grid">
+            {[
+              { n: '1', icon: 'plus' as const, title: 'home.step1', desc: 'home.step1Desc', action: () => openDialog('new') },
+              { n: '2', icon: 'upload' as const, title: 'home.step2', desc: 'home.step2Desc', action: () => fileRef.current?.click() },
+              { n: '3', icon: 'download' as const, title: 'home.step3', desc: 'home.step3Desc', action: () => (projects[0] ? void openProject(projects[0].id) : openDialog('new')) },
+            ].map((step) => (
+              <button type="button" className="step-card" key={step.n} onClick={step.action}>
+                <span className="step-num">{step.n}</span>
+                <span className="step-icon">
+                  <Icon name={step.icon} size={17} />
+                </span>
+                <span className="step-copy">
+                  <span className="step-title">{t(step.title)}</span>
+                  <span className="step-desc">{t(step.desc)}</span>
+                </span>
+                <Icon name="chevronRight" size={15} className="step-arrow" />
+              </button>
+            ))}
+          </div>
         </section>
 
         <section className="home-section" aria-labelledby="recent-heading">
@@ -593,6 +622,15 @@ export function Home() {
             <span>{t('app.demo')}</span>
           </div>
         </footer>
+
+        <div className="home-copyright">
+          <span className="copyright-mark">©</span>
+          <span className="copyright-year">{new Date().getFullYear()}</span>
+          <span className="copyright-name">Youssef Mosbeh</span>
+          <span className="dot" />
+          <span>{t('brand.rights')}</span>
+          <span className="copyright-brand">editEZ</span>
+        </div>
       </main>
     </div>
   );

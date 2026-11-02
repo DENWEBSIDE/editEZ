@@ -1,5 +1,5 @@
 /* Catalogues: canvas sizes, export presets, effects, fonts, text templates. */
-import type { BlendMode, EffectType, TextAnimation, TextStyle, TextTemplate, TransitionType } from '../types';
+import type { BlendMode, EffectType, GradeSettings, TextAnimation, TextStyle, TextTemplate, TransitionType } from '../types';
 import type { TKey } from '../i18n/en';
 
 export interface AspectPreset {
@@ -270,6 +270,197 @@ export const EFFECTS: EffectDef[] = [
     category: 'motion',
     params: [{ key: 'zoom', label: 'effects.param.zoom', min: 0.02, max: 0.5, step: 0.01, default: 0.12 }],
   },
+  {
+    type: 'invert',
+    label: 'effect.invert',
+    desc: 'effect.invertDesc',
+    category: 'style',
+    params: [amountParam(0, 1, 0.01, 1)],
+    previewCss: 'invert(1)',
+  },
+  {
+    type: 'solarize',
+    label: 'effect.solarize',
+    desc: 'effect.solarizeDesc',
+    category: 'style',
+    params: [{ key: 'amount', label: 'effects.param.threshold', min: 0, max: 1, step: 0.01, default: 0.6 }],
+    previewCss: 'invert(0.35) saturate(1.4)',
+  },
+  {
+    type: 'tint',
+    label: 'effect.tint',
+    desc: 'effect.tintDesc',
+    category: 'color',
+    params: [amountParam(0, 1, 0.01, 0.45)],
+    previewCss: 'sepia(0.5) hue-rotate(-18deg) saturate(1.6)',
+  },
+  {
+    type: 'pixelate',
+    label: 'effect.pixelate',
+    desc: 'effect.pixelateDesc',
+    category: 'style',
+    params: [{ key: 'amount', label: 'effects.param.size', min: 2, max: 48, step: 1, default: 12 }],
+  },
+  {
+    type: 'emboss',
+    label: 'effect.emboss',
+    desc: 'effect.embossDesc',
+    category: 'style',
+    params: [amountParam(0, 1, 0.01, 0.6)],
+    previewCss: 'contrast(1.6) grayscale(0.6)',
+  },
+  {
+    type: 'scanlines',
+    label: 'effect.scanlines',
+    desc: 'effect.scanlinesDesc',
+    category: 'style',
+    params: [amountParam(0, 1, 0.01, 0.5)],
+    previewCss: 'contrast(1.2) brightness(0.9)',
+  },
+  {
+    type: 'lightLeak',
+    label: 'effect.lightleak',
+    desc: 'effect.lightleakDesc',
+    category: 'light',
+    params: [amountParam(0, 1, 0.01, 0.5)],
+    previewCss: 'saturate(1.3) brightness(1.1) sepia(0.25)',
+  },
+];
+
+
+/* ------------------------------- looks ---------------------------------- */
+/* One-tap CapCut-style filters: a grade tweak plus a small effect stack. */
+export interface LookEffect {
+  type: EffectType;
+  params: Record<string, number | string>;
+}
+
+export interface LookDef {
+  id: string;
+  label: TKey;
+  desc: TKey;
+  swatch: string;
+  grade: Partial<GradeSettings>;
+  effects: LookEffect[];
+}
+
+export const LOOKS: LookDef[] = [
+  {
+    id: 'cinema',
+    label: 'look.cinema',
+    desc: 'look.cinemaDesc',
+    swatch: 'linear-gradient(135deg, #0e3550, #2f8fb8 60%, #f0c37a)',
+    grade: { temperature: -0.24, contrast: 0.16, saturation: -0.05, shadows: 0.1 },
+    effects: [{ type: 'vignette', params: { amount: 0.3 } }],
+  },
+  {
+    id: 'golden',
+    label: 'look.golden',
+    desc: 'look.goldenDesc',
+    swatch: 'linear-gradient(135deg, #ffd89b, #f6a25a 60%, #a8501f)',
+    grade: { temperature: 0.34, saturation: 0.14, exposure: 0.08 },
+    effects: [{ type: 'glow', params: { amount: 0.35 } }],
+  },
+  {
+    id: 'neon',
+    label: 'look.neon',
+    desc: 'look.neonDesc',
+    swatch: 'linear-gradient(135deg, #1b1f4b, #7b2bff 55%, #16e0ff)',
+    grade: { tint: 0.24, contrast: 0.2, saturation: 0.26 },
+    effects: [
+      { type: 'glow', params: { amount: 0.45 } },
+      { type: 'scanlines', params: { amount: 0.25 } },
+    ],
+  },
+  {
+    id: 'vintage',
+    label: 'look.vintage',
+    desc: 'look.vintageDesc',
+    swatch: 'linear-gradient(135deg, #d8c3a5, #b08968 60%, #6b4f3a)',
+    grade: { temperature: 0.2, saturation: -0.24, blacks: 0.12 },
+    effects: [
+      { type: 'sepia', params: { amount: 0.5 } },
+      { type: 'grain', params: { amount: 0.32 } },
+      { type: 'vignette', params: { amount: 0.42 } },
+    ],
+  },
+  {
+    id: 'noir',
+    label: 'look.noir',
+    desc: 'look.noirDesc',
+    swatch: 'linear-gradient(135deg, #2b2b2b, #8c8c8c 70%, #f2f2f2)',
+    grade: { saturation: -1, contrast: 0.34 },
+    effects: [
+      { type: 'vignette', params: { amount: 0.55 } },
+      { type: 'grain', params: { amount: 0.22 } },
+    ],
+  },
+  {
+    id: 'dreamy',
+    label: 'look.dreamy',
+    desc: 'look.dreamyDesc',
+    swatch: 'linear-gradient(135deg, #ffe3f1, #c9d6ff 55%, #9be7ff)',
+    grade: { brightness: 0.08, contrast: -0.12, saturation: 0.1 },
+    effects: [
+      { type: 'blur', params: { amount: 1.2 } },
+      { type: 'glow', params: { amount: 0.5 } },
+    ],
+  },
+  {
+    id: 'pop',
+    label: 'look.pop',
+    desc: 'look.popDesc',
+    swatch: 'linear-gradient(135deg, #ff5c8a, #ffd166 55%, #16c5e6)',
+    grade: { contrast: 0.22, saturation: 0.34 },
+    effects: [{ type: 'sharpen', params: { amount: 0.6 } }],
+  },
+  {
+    id: 'faded',
+    label: 'look.faded',
+    desc: 'look.fadedDesc',
+    swatch: 'linear-gradient(135deg, #dfe7f0, #c3cfda 60%, #9aa8b6)',
+    grade: { contrast: -0.2, blacks: 0.2, saturation: -0.14 },
+    effects: [{ type: 'bleach', params: { amount: 0.35 } }],
+  },
+  {
+    id: 'infrared',
+    label: 'look.infrared',
+    desc: 'look.infraredDesc',
+    swatch: 'linear-gradient(135deg, #0b2a4a, #ff5a3c 65%, #ffd166)',
+    grade: { saturation: 0.2, contrast: 0.12 },
+    effects: [{ type: 'duotone', params: { colorA: '#0b2a4a', colorB: '#ff5a3c' } }],
+  },
+  {
+    id: 'vhs',
+    label: 'look.vhs',
+    desc: 'look.vhsDesc',
+    swatch: 'linear-gradient(135deg, #14322c, #3f7f6f 55%, #d4ff7a)',
+    grade: { contrast: 0.1, saturation: 0.22 },
+    effects: [
+      { type: 'chromaShift', params: { amount: 2 } },
+      { type: 'scanlines', params: { amount: 0.4 } },
+      { type: 'grain', params: { amount: 0.28 } },
+    ],
+  },
+  {
+    id: 'comic',
+    label: 'look.comic',
+    desc: 'look.comicDesc',
+    swatch: 'linear-gradient(135deg, #ffd166, #ef476f 55%, #118ab2)',
+    grade: { saturation: 0.4, contrast: 0.28 },
+    effects: [
+      { type: 'posterize', params: { levels: 5 } },
+      { type: 'sharpen', params: { amount: 0.8 } },
+    ],
+  },
+  {
+    id: 'frost',
+    label: 'look.frost',
+    desc: 'look.frostDesc',
+    swatch: 'linear-gradient(135deg, #dff3ff, #9ed8ff 55%, #4aa3d8)',
+    grade: { temperature: -0.3, brightness: 0.05 },
+    effects: [{ type: 'tint', params: { amount: 0.35, color: '#8fd4ff' } }],
+  },
 ];
 
 export const effectDef = (type: EffectType): EffectDef | undefined => EFFECTS.find((e) => e.type === type);
@@ -374,6 +565,126 @@ export const TEXT_PRESETS: Record<string, TextPresetSpec> = {
     duration: 3,
     text: { template: 'plain', content: 'New text', size: 60, weight: 600, animation: 'fadeUp' },
   },
+  /* ------------------------- ready-made animations ---------------------- */
+  neonTitle: {
+    template: 'title',
+    duration: 3.2,
+    text: {
+      template: 'title',
+      content: 'NEON NIGHTS',
+      size: 86,
+      weight: 700,
+      animation: 'tracking',
+      color: '#8ff6ff',
+      letterSpacing: 0.32,
+      outline: { on: true, color: '#0a2740', width: 4 },
+      shadow: { on: true, color: '#16c5e6', blur: 28, x: 0, y: 0 },
+      y: 0.5,
+    },
+  },
+  popBold: {
+    template: 'title',
+    duration: 2.6,
+    text: {
+      template: 'title',
+      content: 'WATCH THIS',
+      size: 98,
+      weight: 700,
+      animation: 'pop',
+      color: '#ffffff',
+      outline: { on: true, color: '#0a6cff', width: 10 },
+      y: 0.5,
+    },
+  },
+  typeStory: {
+    template: 'plain',
+    duration: 3.6,
+    text: {
+      template: 'plain',
+      content: 'It started with one idea…',
+      size: 54,
+      weight: 500,
+      animation: 'typewriter',
+      color: '#ffffff',
+      align: 'center',
+      y: 0.62,
+    },
+  },
+  quoteCard: {
+    template: 'caption',
+    duration: 4,
+    text: {
+      template: 'caption',
+      content: '“Make it simple, then make it beautiful.”',
+      size: 44,
+      weight: 600,
+      animation: 'reveal',
+      align: 'center',
+      color: '#ffffff',
+      background: { on: true, color: '#0a6cff', padding: 22, radius: 16, opacity: 0.86 },
+      y: 0.5,
+      x: 0.5,
+    },
+  },
+  sticker: {
+    template: 'lowerThird',
+    duration: 3.4,
+    text: {
+      template: 'lowerThird',
+      content: 'Youssef Mosbeh',
+      subtext: 'Creator',
+      size: 42,
+      weight: 700,
+      animation: 'slideIn',
+      align: 'left',
+      x: 0.22,
+      y: 0.8,
+      color: '#0b1a2e',
+      background: { on: true, color: '#ffe066', padding: 16, radius: 12, opacity: 1 },
+      letterSpacing: 0.08,
+    },
+  },
+  endCta: {
+    template: 'endCard',
+    duration: 4.5,
+    text: {
+      template: 'endCard',
+      content: 'Follow for more',
+      subtext: '@youssefmosbeh',
+      size: 64,
+      weight: 700,
+      animation: 'bounce',
+      color: '#ffffff',
+      align: 'center',
+      y: 0.5,
+      x: 0.5,
+    },
+  },
+  glitchTitle: {
+    template: 'title',
+    duration: 2.4,
+    text: {
+      template: 'title',
+      content: 'SYSTEM ERROR',
+      size: 80,
+      weight: 700,
+      animation: 'pop',
+      color: '#ffffff',
+      outline: { on: true, color: '#ef4b6b', width: 6 },
+      shadow: { on: true, color: '#16c5e6', blur: 18, x: 4, y: 0 },
+      y: 0.5,
+    },
+  },
 };
+
+export const ANIMATION_PRESETS: { id: string; label: TKey; desc: TKey; css: string }[] = [
+  { id: 'neonTitle', label: 'anim.neon', desc: 'anim.neonDesc', css: 'linear-gradient(135deg, #0a2740, #16c5e6)' },
+  { id: 'popBold', label: 'anim.pop', desc: 'anim.popDesc', css: 'linear-gradient(135deg, #0a6cff, #5cb8ff)' },
+  { id: 'typeStory', label: 'anim.typewriter', desc: 'anim.typewriterDesc', css: 'linear-gradient(135deg, #1b2230, #4a5a72)' },
+  { id: 'quoteCard', label: 'anim.quote', desc: 'anim.quoteDesc', css: 'linear-gradient(135deg, #0a6cff, #16c5e6 70%, #ffe066)' },
+  { id: 'sticker', label: 'anim.sticker', desc: 'anim.stickerDesc', css: 'linear-gradient(135deg, #ffe066, #f6a25a)' },
+  { id: 'endCta', label: 'anim.endCta', desc: 'anim.endCtaDesc', css: 'linear-gradient(135deg, #ef4b6b, #ffb066)' },
+  { id: 'glitchTitle', label: 'anim.glitch', desc: 'anim.glitchDesc', css: 'linear-gradient(135deg, #ef4b6b, #16c5e6)' },
+];
 
 export const SPEED_PRESETS = [0.25, 0.5, 1, 1.5, 2, 4];

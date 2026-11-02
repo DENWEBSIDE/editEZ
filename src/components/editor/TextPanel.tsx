@@ -3,7 +3,7 @@ import { useStore } from '../../store';
 import { useT } from '../../i18n';
 import { Badge, ColorField, Note, Segmented, Select, Slider, Toggle } from '../ui';
 import { Icon } from '../Icons';
-import { FONTS, TEXT_ANIMATIONS, TEXT_TEMPLATES } from '../../lib/presets';
+import { ANIMATION_PRESETS, FONTS, TEXT_ANIMATIONS, TEXT_TEMPLATES } from '../../lib/presets';
 import { findClip } from '../../lib/edits';
 import type { TextAnimation, TextStyle } from '../../types';
 import type { TKey } from '../../i18n/en';
@@ -49,6 +49,30 @@ export function TextPanel() {
       </div>
 
       <div className="panel-scroll">
+        <section className="panel-section">
+          <div className="panel-section-head">
+            <h3>{t('text.animations')}</h3>
+            <span className="fx-count">{t('text.animationsDesc')}</span>
+          </div>
+          <div className="anim-grid">
+            {ANIMATION_PRESETS.map((anim) => (
+              <button
+                key={anim.id}
+                type="button"
+                className="anim-card"
+                style={{ background: anim.css }}
+                onClick={() => addText(anim.id)}
+                title={t(anim.desc)}
+              >
+                <span className="anim-icon">
+                  <Icon name="sparkles" size={14} />
+                </span>
+                <span className="anim-name">{t(anim.label)}</span>
+              </button>
+            ))}
+          </div>
+        </section>
+
         <section className="panel-section">
           <div className="panel-section-head">
             <h3>{t('text.templates')}</h3>

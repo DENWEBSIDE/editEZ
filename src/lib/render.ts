@@ -934,6 +934,23 @@ export class Compositor {
     const sepiaAmt = sepiaFx ? clamp(num(sepiaFx, 'amount', 0.8), 0, 1) : 0;
     const threshold = clip.effects.find((e) => e.type === 'threshold' && e.enabled);
     const thresholdLevel = threshold ? clamp(num(threshold, 'levels', 0.5), 0, 1) * 255 : -1;
+    const invertFx = clip.effects.find((e) => e.type === 'invert' && e.enabled);
+    const invertAmt = invertFx ? clamp(num(invertFx, 'amount', 1), 0, 1) : 0;
+    const solarFx = clip.effects.find((e) => e.type === 'solarize' && e.enabled);
+    const solarAmt = solarFx ? clamp(num(solarFx, 'amount', 0.6), 0, 1) : 0;
+    const solarLevel = solarAmt > 0 ? Math.max(1, solarAmt * 255) : 0;
+    const tintFx = clip.effects.find((e) => e.type === 'tint' && e.enabled);
+    const tintRgb = tintFx ? hexToRgb(String(tintFx.params?.color ?? '#ff9d5c')) : null;
+    const tintAmt = tintFx ? clamp(num(tintFx, 'amount', 0.45), 0, 1) * 0.7 : 0;
+    const pixelFx = clip.effects.find((e) => e.type === 'pixelate' && e.enabled);
+    const pixelSize = pixelFx ? Math.max(1, Math.round(num(pixelFx, 'amount', 12))) : 1;
+    const embossFx = clip.effects.find((e) => e.type === 'emboss' && e.enabled);
+    const embossAmt = embossFx ? clamp(num(embossFx, 'amount', 0.6), 0, 1) : 0;
+    const scanFx = clip.effects.find((e) => e.type === 'scanlines' && e.enabled);
+    const scanAmt = scanFx ? clamp(num(scanFx, 'amount', 0.5), 0, 1) : 0;
+    const leakFx = clip.effects.find((e) => e.type === 'lightLeak' && e.enabled);
+    const leakRgb = leakFx ? hexToRgb(String(leakFx.params?.color ?? '#ffb066')) : null;
+    const leakAmt = leakFx ? clamp(num(leakFx, 'amount', 0.5), 0, 1) * 0.65 : 0;
 
     const w4 = W * 4;
     const src = sharpenAmt > 0 ? new Uint8ClampedArray(px) : px;
@@ -943,10 +960,14 @@ export class Compositor {
       const row = y * w4;
       for (let x = 0; x < W; x++) {
         const i = row + x * 4;
-        let r = src[i];
-        let g = src[i + 1];
-        let b = src[i + 2];
-        let a = src[i + 3];
+        const si =
+          pixelSize > 1
+            ? Math.floor(y / pixelSize) * pixelSize * w4 + Math.floor(x / pixelSize) * pixelSize * 4
+            : i;
+        let r = src[si];
+        let g = src[si + 1];
+        let b = src[si + 2];
+        let a = src[si + 3];
         if (a === 0) continue;
 
         if (chroma && key) {
@@ -1010,6 +1031,38 @@ export class Compositor {
           b += (sb - b) * sepiaAmt;
         }
 
+        if (invertAmt > 0) {
+          r += (255 - r - r) * invertAmt;
+          g += (255 - g - g) * invertAmt;
+          b += (255 - b - b) * invertAmt;
+        }
+
+        if (solarLevel > 0) {
+          const luma = 0.299 * r + 0.587 * g + 0.114 * b;
+          if (luma > solarLevel) {
+            r = 255 - r;
+            g = 255 - g;
+            b = 255 - b;
+          }
+        }
+
+        if (tintRgb) {
+          r += (tintRgb[0] - r) * tintAmt;
+          g += (tintRgb[1] - g) * tintAmt;
+          b += (tintRgb[2] - b) * tintAmt;
+        }
+
+        if (embossAmt > 0) {
+          const l = x > 0 ? si - 4 : si;
+          const up = y > 0 ? si - w4 : si;
+          const lumaHere = 0.299 * src[si] + 0.587 * src[si + 1] + 0.114 * src[si + 2];
+          const lumaDiag = 0.299 * src[l] + 0.587 * src[up] + 0.114 * src[up];
+          const edgeLuma = (lumaHere - lumaDiag) * embossAmt * 2.6 + 128;
+          r = r * 0.35 + edgeLuma * 0.65;
+          g = g * 0.35 + edgeLuma * 0.65;
+          b = b * 0.35 + edgeLuma * 0.65;
+        }
+
         if (duoA && duoB) {
           const luma = clamp((0.299 * r + 0.587 * g + 0.114 * b) / 255, 0, 1);
           r = duoA[0] + (duoB[0] - duoA[0]) * luma;
@@ -1060,6 +1113,23 @@ export class Compositor {
           r += (src[i] - blurR) * amountE * 2;
           g += (src[i + 1] - blurG) * amountE * 2;
           b += (src[i + 2] - blurB) * amountE * 2;
+        }
+
+        if (scanAmt > 0) {
+          const line = y % 3 === 0 ? 1 - scanAmt * 0.34 : 1;
+          r *= line;
+          g *= line;
+          b *= line;
+        }
+
+        if (leakRgb) {
+          const dx = x / W - 0.82;
+          const dy = y / H - 0.18;
+          const glow = clamp(1 - Math.hypot(dx * 1.15, dy) * 1.35, 0, 1);
+          const f = glow * glow * leakAmt;
+          r += leakRgb[0] * f;
+          g += leakRgb[1] * f;
+          b += leakRgb[2] * f;
         }
 
         px[i] = r;

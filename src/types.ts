@@ -151,6 +151,13 @@ export type EffectType =
   | 'chromaShift'
   | 'mirror'
   | 'kenburns'
+  | 'invert'
+  | 'solarize'
+  | 'tint'
+  | 'pixelate'
+  | 'emboss'
+  | 'scanlines'
+  | 'lightLeak'
   | 'none';
 
 export interface EffectInstance {

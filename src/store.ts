@@ -30,6 +30,7 @@ import {
 import { downloadBlob, importFile, type ImportOutcome } from './lib/media';
 import { buildTemplate } from './lib/templates';
 import * as cloud from './lib/cloud';
+import { applyTheme, isTheme, systemTheme, type Theme } from './lib/theme';
 import type { CloudStats, Session } from './lib/cloud';
 import { TEXT_PRESETS } from './lib/presets';
 import type { TextStyle } from './types';
@@ -83,6 +84,7 @@ export interface CueInput {
 
 interface State {
   lang: Lang;
+  theme: Theme;
   booted: boolean;
   view: 'home' | 'editor' | 'auth';
   projects: ProjectMeta[];
@@ -138,6 +140,8 @@ interface State {
 
   boot: () => Promise<void>;
   setLang: (l: Lang) => void;
+  setTheme: (t: Theme) => void;
+  toggleTheme: () => void;
   refreshProjects: () => Promise<void>;
   goHome: () => void;
 
@@ -290,6 +294,7 @@ export const useStore = create<State>((set, get) => {
 
   return {
     lang: 'en',
+    theme: 'light',
     booted: false,
     view: 'home',
     projects: [],
@@ -357,6 +362,10 @@ export const useStore = create<State>((set, get) => {
     /* ------------------------------------------------------------ boot */
     boot: async () => {
       const storedLang = (await db.kvGet<Lang>('lang')) ?? 'en';
+      const storedTheme = await db.kvGet<Theme>('theme');
+      const theme: Theme = isTheme(storedTheme) ? storedTheme : systemTheme();
+      applyTheme(theme);
+      set({ theme });
       const onboardingSeen = (await db.kvGet<boolean>('onboardSeen')) ?? false;
       const favorites = (await db.kvGet<string[]>('favorites')) ?? [];
       const tipsSeen = (await db.kvGet<Record<string, boolean>>('tipsSeen')) ?? {};
@@ -383,6 +392,17 @@ export const useStore = create<State>((set, get) => {
       setActiveLang(lang);
       set({ lang });
       void db.kvSet('lang', lang);
+    },
+
+    setTheme: (theme) => {
+      applyTheme(theme);
+      set({ theme });
+      void db.kvSet('theme', theme);
+    },
+
+    toggleTheme: () => {
+      const next: Theme = get().theme === 'dark' ? 'light' : 'dark';
+      get().setTheme(next);
     },
 
     refreshProjects: async () => {

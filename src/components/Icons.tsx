@@ -96,7 +96,10 @@ export type IconName =
   | 'cloud'
   | 'cloudOff'
   | 'mail'
-  | 'logOut';
+  | 'logOut'
+  | 'moon'
+  | 'sun'
+  | 'steps';
 
 const PATHS: Record<IconName, string> = {
   play: 'M8 5.5v13l11-6.5z',
@@ -151,6 +154,9 @@ const PATHS: Record<IconName, string> = {
   cloud: 'M7.5 18.5h9.2a3.3 3.3 0 00.2-6.6 5.2 5.2 0 00-10-1.2A4 4 0 007.5 18.5z',
   cloudOff: 'M7.5 18.5h9.2a3.3 3.3 0 00.2-6.6 5.2 5.2 0 00-10-1.2A4 4 0 007.5 18.5zM4 4l16 16',
   mail: 'M3.5 6.5h17v11h-17zM3.5 7l8.5 6 8.5-6',
+  moon: 'M20 14.5A8.5 8.5 0 019.5 4 8.5 8.5 0 1020 14.5z',
+  sun: 'M12 16.5a4.5 4.5 0 100-9 4.5 4.5 0 000 9zM12 2v2M12 20v2M4.2 4.2l1.4 1.4M18.4 18.4l1.4 1.4M2 12h2M20 12h2M4.2 19.8l1.4-1.4M18.4 5.6l1.4-1.4',
+  steps: 'M4 18h5v-5h5V8h6M4 18v-2M20 8V6',
   logOut: 'M14 5H6a1 1 0 00-1 1v12a1 1 0 001 1h8M17 8l4 4-4 4M21 12H10',
   split: 'M4 5h7v14H4zM13 5h7v14h-7zM12 3v18',
   cpu: 'M6 6h12v12H6zM9 9h6v6H9zM9 3v3M15 3v3M9 18v3M15 18v3M3 9h3M3 15h3M18 9h3M18 15h3',

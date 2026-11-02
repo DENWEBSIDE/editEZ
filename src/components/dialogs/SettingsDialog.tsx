@@ -5,6 +5,7 @@ import { Button, ColorField, Modal, Note, Select, Slider, Toggle, useConfirm } f
 import { ASPECTS, FPS_OPTIONS } from '../../lib/presets';
 import { formatBytes } from '../../lib/format';
 import { LanguageSwitcher } from '../LanguageSwitcher';
+import { ThemeToggle } from '../ThemeToggle';
 import { requestPersistent } from '../../lib/db';
 
 export function SettingsDialog() {
@@ -228,6 +229,12 @@ export function SettingsDialog() {
         ) : null}
 
         <div className="settings-col">
+          <section className="settings-block">
+            <h3>{t('settings.appearance')}</h3>
+            <p className="settings-copy">{t('settings.appearanceDesc')}</p>
+            <ThemeToggle />
+          </section>
+
           <section className="settings-block">
             <h3>{t('settings.language')}</h3>
             <p className="settings-copy">{t('settings.languageDesc')}</p>

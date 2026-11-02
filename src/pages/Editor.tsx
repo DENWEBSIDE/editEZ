@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useStore, type PanelId } from '../store';
 import { useT } from '../i18n';
 import { TopBar } from '../components/editor/TopBar';
@@ -31,9 +31,8 @@ const PANELS: { id: PanelId; icon: IconName; label: TKey }[] = [
 
 const MOBILE_TABS: { id: MobileTab; icon: IconName; label: TKey }[] = [
   { id: 'media', icon: 'film', label: 'panel.media' },
-  { id: 'preview', icon: 'monitor', label: 'mobile.preview' },
+  { id: 'preview', icon: 'layers', label: 'mobile.edit' },
   { id: 'props', icon: 'sliders', label: 'mobile.props' },
-  { id: 'timeline', icon: 'layers', label: 'mobile.timeline' },
 ];
 
 function isTyping(target: EventTarget | null): boolean {
@@ -51,6 +50,31 @@ export function Editor() {
   const setMobileTab = useStore((s) => s.setMobileTab);
   const projectName = useStore((s) => s.project?.name);
   const [previewAsset, setPreviewAsset] = useState<string | null>(null);
+  const [split, setSplit] = useState(46);
+  const splitRef = useRef<{ y: number; start: number } | null>(null);
+
+  useEffect(() => {
+    const onMove = (e: PointerEvent) => {
+      const origin = splitRef.current;
+      if (!origin) return;
+      const col = document.querySelector('.center-col');
+      if (!col) return;
+      const height = col.getBoundingClientRect().height || 600;
+      const delta = ((origin.y - e.clientY) / height) * 100;
+      setSplit(Math.max(26, Math.min(68, origin.start + delta)));
+    };
+    const onUp = () => {
+      if (!splitRef.current) return;
+      splitRef.current = null;
+      document.body.classList.remove('is-resizing-tl');
+    };
+    window.addEventListener('pointermove', onMove);
+    window.addEventListener('pointerup', onUp);
+    return () => {
+      window.removeEventListener('pointermove', onMove);
+      window.removeEventListener('pointerup', onUp);
+    };
+  }, []);
 
   useEffect(() => {
     const onPreview = (e: Event) => {
@@ -245,8 +269,22 @@ export function Editor() {
           <PanelBody />
         </section>
 
-        <div className="center-col">
+        <div className="center-col" style={{ ['--tl-split' as string]: `${split}%` } as React.CSSProperties}>
           <Preview />
+          <div
+            className="tl-resizer"
+            role="separator"
+            aria-orientation="horizontal"
+            aria-label={t('timeline.resize')}
+            onPointerDown={(e) => {
+              e.preventDefault();
+              splitRef.current = { y: e.clientY, start: split };
+              document.body.classList.add('is-resizing-tl');
+            }}
+            onDoubleClick={() => setSplit(46)}
+          >
+            <span />
+          </div>
           <Timeline />
         </div>
 
@@ -271,6 +309,9 @@ export function Editor() {
       </nav>
 
       <StatusBar />
+      <div className="editor-credit" aria-hidden="true">
+        <span>© {new Date().getFullYear()}</span> Youssef Mosbeh
+      </div>
       <MediaPreviewModal assetId={previewAsset} onClose={() => setPreviewAsset(null)} />
     </div>
   );

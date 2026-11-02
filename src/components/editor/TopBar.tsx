@@ -5,6 +5,7 @@ import { Button, IconButton, Kbd, Tip } from '../ui';
 import { Icon } from '../Icons';
 import { LanguageSwitcher } from '../LanguageSwitcher';
 import { AccountMenu, SyncChip } from '../AccountMenu';
+import { ThemeToggle } from '../ThemeToggle';
 import { modKey } from '../../lib/format';
 
 interface MenuItem {
@@ -234,6 +235,7 @@ export function TopBar() {
             <IconButton icon="trash" label={t('common.delete')} size="sm" onClick={() => useStore.getState().deleteSelection()} />
           </Tip>
         </div>
+        <ThemeToggle compact />
         <SyncChip compact />
         <LanguageSwitcher compact />
         <Tip label={t('shortcuts.title')}>
