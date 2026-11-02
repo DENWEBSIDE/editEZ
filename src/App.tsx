@@ -9,6 +9,7 @@ import { NewProjectDialog } from './components/dialogs/NewProjectDialog';
 import { SettingsDialog } from './components/dialogs/SettingsDialog';
 import { ShortcutsDialog } from './components/dialogs/ShortcutsDialog';
 import { OnboardingDialog } from './components/dialogs/OnboardingDialog';
+import { GuideDialog } from './components/dialogs/GuideDialog';
 import { CapabilitiesDialog } from './components/dialogs/CapabilitiesDialog';
 import { RecoveryDialog } from './components/dialogs/RecoveryDialog';
 import { ExportDialog } from './components/dialogs/ExportDialog';
@@ -107,6 +108,7 @@ function Shell() {
       {dialog === 'shortcuts' ? <ShortcutsDialog /> : null}
       {dialog === 'onboard' ? <OnboardingDialog /> : null}
       {dialog === 'capabilities' ? <CapabilitiesDialog /> : null}
+      {dialog === 'guide' ? <GuideDialog /> : null}
       {dialog === 'recover' ? <RecoveryDialog /> : null}
       {dialog === 'export' && project ? <ExportDialog /> : null}
       {dialog === 'subsExport' ? <SubsExportDialog /> : null}

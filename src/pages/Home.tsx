@@ -349,6 +349,9 @@ export function Home() {
               >
                 {t('home.tryDemo')}
               </Button>
+              <Button variant="ghost" size="lg" icon="help" onClick={() => openDialog('guide')}>
+                {t('home.guide')}
+              </Button>
             </div>
             <div className="home-hero-stats">
               <div className="home-hero-stat">

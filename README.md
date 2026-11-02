@@ -15,6 +15,26 @@ npm run build    # type-check + production build
 npm run preview  # serve the production build on :4173
 ```
 
+## v3 — keyframes, effects lane, voice-over, guide, reliable downloads
+
+- **Download fix** — `src/lib/download.ts` tries the File System Access picker, then a synthetic
+  `<a download>` click, and the export dialog explains what happened. Exports no longer rely on
+  `requestAnimationFrame` (throttled inside embedded previews), audio-track creation can no longer
+  abort a render, recorder errors surface as readable messages, and the error panel offers
+  **“Retry with lighter settings”** (720p · 24 fps · no audio). When the app runs inside an
+  iframe, the dialog warns that embedded previews block downloads and offers *open in new tab*
+  and *copy link*.
+- **Keyframes** — diamond button in the timeline toolbar (or `K`) pins opacity / position /
+  scale / rotation at the playhead for the selection; keyframe times render as gold diamonds on
+  the clip; the Motion section in Properties clears them.
+- **Effects lane** — `.tl-fx-strip` above the tracks lists every effect on the selected clip with
+  a one-tap route back to the library (`+ Add effect`).
+- **Voice-over** — microphone button in the top bar opens the Audio panel, scrolls to the recorder
+  and highlights it; unavailable microphones explain the embedded-preview limitation.
+- **Guide + onboarding** — new `GuideDialog` (8 illustrated sections, searchable) opened from the
+  home hero and the help icon; onboarding grew to 7 steps covering keyframes and the effects lane.
+- **Brand animation** — animated gradient + sheen on the EZ logo, splash pop-in, `prefers-reduced-motion` respected.
+
 ## What works today
 
 **Projects** — create with a canvas preset (16:9, 9:16, 1:1, 4:5, 4:3, 21:9 or custom),

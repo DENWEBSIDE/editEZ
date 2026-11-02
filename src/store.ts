@@ -1,6 +1,6 @@
 /* Central app state: project document, selection, transport, UI and autosave. */
 import { create } from 'zustand';
-import type { Asset, Clip, Lang, Lut, Project, ProjectMeta, Track, TrackKind } from './types';
+import type { Asset, Clip, KeyframeProp, Lang, Lut, Project, ProjectMeta, Track, TrackKind } from './types';
 import { clamp, uid } from './types';
 import { setActiveLang, t } from './i18n';
 import * as db from './lib/db';
@@ -46,7 +46,8 @@ export type DialogId =
   | 'capabilities'
   | 'subsExport'
   | 'recover'
-  | 'account';
+  | 'account'
+  | 'guide';
 export type MobileTab = 'media' | 'preview' | 'props' | 'timeline';
 export type SaveStatus = 'saved' | 'saving' | 'dirty' | 'error';
 
@@ -216,6 +217,8 @@ interface State {
   groupSelection: () => void;
   ungroupSelection: () => void;
   addLut: (lut: Lut) => void;
+  addKeyframesHere: (props?: KeyframeProp[]) => void;
+  clearKeyframesHere: () => void;
 
   applyRecovery: () => Promise<void>;
   dismissRecovery: () => void;
@@ -1139,6 +1142,60 @@ export const useStore = create<State>((set, get) => {
       set({ luts: { ...get().luts, [lut.id]: lut } });
       const project = get().project;
       if (project) void db.kvSet(`luts:${project.id}`, get().luts);
+    },
+
+    /* ------------------------------------------------------ keyframes */
+    addKeyframesHere: (props) => {
+      const { project, selection, playhead } = get();
+      if (!project || !selection.length) {
+        get().toast('warn', t('props.keyframe.needsClip'));
+        return;
+      }
+      const list: KeyframeProp[] = props ?? ['opacity', 'x', 'y', 'scale', 'rotate'];
+      let count = 0;
+      get().mutate((p) => {
+        for (const track of p.tracks) {
+          for (const c of track.clips) {
+            if (!selection.includes(c.id)) continue;
+            const local = clamp(playhead - c.start, 0, c.duration);
+            for (const prop of list) {
+              const value =
+                prop === 'opacity'
+                  ? c.opacity
+                  : prop === 'volume'
+                    ? c.volume
+                    : prop === 'x'
+                      ? c.transform.x
+                      : prop === 'y'
+                        ? c.transform.y
+                        : prop === 'scale'
+                          ? c.transform.scale
+                          : c.transform.rotate;
+              const frames = c.keyframes[prop] ?? [];
+              const idx = frames.findIndex((f) => Math.abs(f.t - local) < 0.03);
+              if (idx >= 0) frames[idx].v = value;
+              else frames.push({ t: local, v: value, ease: 'smooth' });
+              frames.sort((a, b) => a.t - b.t);
+              c.keyframes[prop] = frames;
+              count++;
+            }
+          }
+        }
+      });
+      if (count) get().toast('success', t('props.keyframe.added', { n: count }));
+    },
+
+    clearKeyframesHere: () => {
+      const { selection } = get();
+      if (!selection.length) return;
+      get().mutate((p) => {
+        for (const track of p.tracks) {
+          for (const c of track.clips) {
+            if (selection.includes(c.id)) c.keyframes = {};
+          }
+        }
+      });
+      get().toast('info', t('props.keyframe.cleared'));
     },
 
     /* ------------------------------------------------------- recovery */

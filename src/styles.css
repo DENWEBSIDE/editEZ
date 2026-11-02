@@ -10414,3 +10414,293 @@ body.is-resizing-tl .tl-resizer span {
     display: none;
   }
 }
+
+/* =========================================================================
+   Effects lane, keyframe markers, guide, voice-over  (v3 additions)
+   ========================================================================= */
+
+/* --- effects lane under the timeline toolbar --------------------------- */
+.tl-fx-strip {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  min-height: 38px;
+  border-bottom: 1px solid var(--line-soft, var(--line));
+  background: linear-gradient(180deg, color-mix(in srgb, var(--accent) 6%, transparent), transparent);
+  overflow: hidden;
+}
+.tl-fx-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  flex: none;
+  font-size: 11px;
+  font-weight: 650;
+  letter-spacing: 0.01em;
+  color: var(--text-2);
+  white-space: nowrap;
+}
+.tl-fx-chips {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.tl-fx-chips::-webkit-scrollbar { display: none; }
+.tl-fx-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  flex: none;
+  padding: 3px 9px 3px 7px;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--accent) 32%, var(--line));
+  background: color-mix(in srgb, var(--accent) 10%, var(--surface, #fff));
+  color: var(--text-1);
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform 0.14s ease, box-shadow 0.14s ease, background 0.14s ease;
+}
+.tl-fx-chip:hover { transform: translateY(-1px); box-shadow: 0 4px 12px color-mix(in srgb, var(--accent) 22%, transparent); }
+.tl-fx-chip.is-off { opacity: 0.45; }
+.tl-fx-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--accent);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 22%, transparent);
+}
+.tl-fx-empty { font-size: 11px; color: var(--text-3); white-space: nowrap; }
+.tl-fx-add {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  flex: none;
+  padding: 3px 10px;
+  border-radius: 999px;
+  border: 1px dashed color-mix(in srgb, var(--accent) 45%, var(--line));
+  background: transparent;
+  color: var(--accent-strong, var(--accent));
+  font-size: 11px;
+  font-weight: 650;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+.tl-fx-add:hover { background: color-mix(in srgb, var(--accent) 12%, transparent); }
+
+/* --- keyframe diamonds on clips --------------------------------------- */
+.clip-kf {
+  position: absolute;
+  bottom: 3px;
+  width: 7px;
+  height: 7px;
+  margin-left: -3.5px;
+  background: #ffd24a;
+  border: 1px solid rgba(0, 0, 0, 0.45);
+  transform: rotate(45deg);
+  border-radius: 1px;
+  pointer-events: none;
+  box-shadow: 0 0 6px rgba(255, 210, 74, 0.55);
+  z-index: 3;
+}
+.tl-tool-kf { color: #d9a400; }
+.tl-tool-kf:not(:disabled):hover { color: #b98600; background: color-mix(in srgb, #ffd24a 22%, transparent); }
+
+/* --- export save hints ------------------------------------------------ */
+.export-filename {
+  display: block;
+  margin-top: 6px;
+  font-size: 11px;
+  color: var(--text-3);
+  word-break: break-all;
+}
+.export-hint { margin: 8px 0 0; font-size: 12px; line-height: 1.6; color: var(--text-2); }
+.note-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+
+/* --- voice-over entry ------------------------------------------------- */
+.voiceover-btn.is-pulsing { animation: voicePulse 1.8s ease-out infinite; }
+@keyframes voicePulse {
+  0% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--accent) 55%, transparent); }
+  70% { box-shadow: 0 0 0 7px transparent; }
+  100% { box-shadow: 0 0 0 0 transparent; }
+}
+.voice-section.is-flash { animation: voiceFlash 1.4s ease-out; border-radius: var(--radius-sm, 10px); }
+@keyframes voiceFlash {
+  0% { background: color-mix(in srgb, var(--accent) 26%, transparent); }
+  100% { background: transparent; }
+}
+
+/* --- guide dialog ----------------------------------------------------- */
+.guide {
+  display: grid;
+  grid-template-columns: 236px minmax(0, 1fr);
+  gap: 16px;
+  min-height: 380px;
+  max-height: min(64vh, 520px);
+}
+.guide-nav { display: flex; flex-direction: column; gap: 10px; min-height: 0; }
+.guide-nav-list { display: flex; flex-direction: column; gap: 4px; overflow-y: auto; padding-inline-end: 4px; }
+.guide-nav-item {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 8px 10px;
+  border-radius: 10px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--text-2);
+  font-size: 12.5px;
+  font-weight: 600;
+  text-align: start;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+.guide-nav-item:hover { background: var(--hover, rgba(0, 0, 0, 0.04)); color: var(--text-1); }
+.guide-nav-item.is-active {
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+  border-color: color-mix(in srgb, var(--accent) 30%, transparent);
+  color: var(--accent-strong, var(--accent));
+}
+.guide-nav-icon {
+  display: inline-grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+  color: var(--accent-strong, var(--accent));
+  flex: none;
+}
+.guide-nav-text { flex: 1; min-width: 0; }
+.guide-nav-tag {
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  padding: 2px 5px;
+  border-radius: 5px;
+  background: color-mix(in srgb, var(--accent-2, #16c5e6) 22%, transparent);
+  color: var(--accent-strong, var(--accent));
+}
+.guide-nav-num { font-size: 10px; color: var(--text-3); }
+.guide-empty { font-size: 12px; color: var(--text-3); padding: 8px; }
+.guide-body { overflow-y: auto; padding-inline-end: 6px; }
+.guide-head { display: flex; gap: 12px; align-items: flex-start; margin-bottom: 14px; }
+.guide-head-icon {
+  display: grid;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
+  flex: none;
+  color: #fff;
+  background: linear-gradient(135deg, var(--accent), var(--accent-2, #16c5e6));
+  box-shadow: 0 8px 20px color-mix(in srgb, var(--accent) 32%, transparent);
+}
+.guide-head h3 { margin: 0 0 4px; font-size: 15px; }
+.guide-head p { margin: 0; font-size: 12.5px; line-height: 1.65; color: var(--text-2); }
+.guide-steps { list-style: none; margin: 0 0 12px; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.guide-steps li {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--line);
+  background: color-mix(in srgb, var(--accent) 4%, var(--surface, #fff));
+  font-size: 12.5px;
+  line-height: 1.65;
+  color: var(--text-1);
+}
+.guide-step-num {
+  display: grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  flex: none;
+  border-radius: 6px;
+  font-size: 10.5px;
+  font-weight: 700;
+  color: var(--accent-strong, var(--accent));
+  background: color-mix(in srgb, var(--accent) 16%, transparent);
+}
+.guide-tip {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+  padding: 10px 12px;
+  border-radius: 10px;
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--text-2);
+  background: color-mix(in srgb, var(--accent-2, #16c5e6) 12%, transparent);
+  border: 1px solid color-mix(in srgb, var(--accent-2, #16c5e6) 26%, transparent);
+}
+.guide-actions { display: flex; gap: 8px; margin-top: 12px; }
+
+@media (max-width: 760px) {
+  .guide { grid-template-columns: minmax(0, 1fr); max-height: min(70vh, 560px); }
+  .guide-nav-list { flex-direction: row; overflow-x: auto; padding-bottom: 6px; }
+  .guide-nav-item { flex: none; }
+  .guide-nav-num { display: none; }
+  .tl-fx-title { display: none; }
+}
+
+/* --- animated EZ brand ------------------------------------------------ */
+.brand-mark {
+  position: relative;
+  overflow: hidden;
+  background: linear-gradient(140deg, #3aa4ff, #1a8cff 45%, #16c5e6 100%);
+  background-size: 200% 200%;
+  animation: brandFlow 7s ease-in-out infinite, brandFloat 6s ease-in-out infinite;
+  transition: transform 0.25s ease, box-shadow 0.25s ease;
+}
+.brand-mark::after {
+  content: '';
+  position: absolute;
+  inset: -40% -60%;
+  background: linear-gradient(115deg, transparent 38%, rgba(255, 255, 255, 0.55) 50%, transparent 62%);
+  transform: translateX(-120%);
+  animation: brandSheen 5.5s ease-in-out infinite;
+  pointer-events: none;
+}
+.brand:hover .brand-mark {
+  transform: translateY(-1px) scale(1.04);
+  box-shadow: 0 10px 24px rgba(26, 140, 255, 0.45);
+}
+@keyframes brandFlow {
+  0%, 100% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+}
+@keyframes brandFloat {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-1.5px); }
+}
+@keyframes brandSheen {
+  0%, 62% { transform: translateX(-120%); }
+  82%, 100% { transform: translateX(120%); }
+}
+.splash-logo {
+  animation: pulse 2.4s ease-in-out infinite, splashPop 0.7s cubic-bezier(0.2, 0.9, 0.25, 1.1) both;
+}
+@keyframes splashPop {
+  from { transform: scale(0.82); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}
+.splash-title {
+  background: linear-gradient(100deg, var(--text-0), var(--accent) 60%, var(--accent-2, #16c5e6));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+@media (prefers-reduced-motion: reduce) {
+  .brand-mark,
+  .brand-mark::after,
+  .splash-logo,
+  .voiceover-btn.is-pulsing { animation: none !important; }
+}

@@ -128,7 +128,8 @@ export function TopBar() {
       id: 'help',
       label: t('menu.help'),
       items: [
-        { label: t('shortcuts.title'), shortcut: '?', onSelect: () => openDialog('shortcuts') },
+        { label: t('guide.title'), shortcut: '?', onSelect: () => openDialog('guide') },
+        { label: t('shortcuts.title'), onSelect: () => openDialog('shortcuts') },
         { label: t('cap.title'), onSelect: () => openDialog('capabilities') },
         { label: t('menu.tour'), onSelect: () => openDialog('onboard') },
         { divider: true, label: '' },
@@ -234,12 +235,28 @@ export function TopBar() {
           <Tip label={t('common.delete')}>
             <IconButton icon="trash" label={t('common.delete')} size="sm" onClick={() => useStore.getState().deleteSelection()} />
           </Tip>
+          <Tip label={t('editor.voiceover')}>
+            <IconButton
+              icon="mic"
+              label={t('editor.voiceover')}
+              size="sm"
+              className="voiceover-btn"
+              onClick={() => {
+                if (!navigator.mediaDevices?.getUserMedia) {
+                  useStore.getState().toast('warn', t('editor.voiceoverUnavailable'));
+                  return;
+                }
+                useStore.getState().setPanel('audio');
+                window.setTimeout(() => window.dispatchEvent(new CustomEvent('editez:focus-voiceover')), 60);
+              }}
+            />
+          </Tip>
         </div>
         <ThemeToggle compact />
         <SyncChip compact />
         <LanguageSwitcher compact />
-        <Tip label={t('shortcuts.title')}>
-          <IconButton icon="help" label={t('shortcuts.title')} size="sm" onClick={() => openDialog('shortcuts')} />
+        <Tip label={t('guide.title')}>
+          <IconButton icon="help" label={t('guide.title')} size="sm" onClick={() => openDialog('guide')} />
         </Tip>
         <Button
           size="sm"

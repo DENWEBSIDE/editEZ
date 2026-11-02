@@ -7,6 +7,8 @@ import { Icon, type IconName } from '../Icons';
 const STEPS: { icon: IconName; title: string; desc: string }[] = [
   { icon: 'upload', title: 'onboard.step1.title', desc: 'onboard.step1.desc' },
   { icon: 'layers', title: 'onboard.step2.title', desc: 'onboard.step2.desc' },
+  { icon: 'sparkles', title: 'onboard.step7.title', desc: 'onboard.step7.desc' },
+  { icon: 'keyframe', title: 'onboard.step6.title', desc: 'onboard.step6.desc' },
   { icon: 'palette', title: 'onboard.step3.title', desc: 'onboard.step3.desc' },
   { icon: 'mic', title: 'onboard.step4.title', desc: 'onboard.step4.desc' },
   { icon: 'download', title: 'onboard.step5.title', desc: 'onboard.step5.desc' },
@@ -34,6 +36,9 @@ export function OnboardingDialog() {
         <>
           <Button variant="ghost" onClick={close}>
             {t('onboard.skip')}
+          </Button>
+          <Button variant="ghost" icon="help" onClick={() => openDialog('guide')}>
+            {t('home.guide')}
           </Button>
           <div className="spacer" />
           <span className="onboard-step mono">{t('onboard.step', { n: step + 1, total: STEPS.length })}</span>

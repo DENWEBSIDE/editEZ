@@ -6,6 +6,7 @@ import { EXPORT_PRESETS, QUALITIES, FPS_OPTIONS } from '../../lib/presets';
 import { contentEnd } from '../../lib/edits';
 import { formatBytes, formatTimecode } from '../../lib/format';
 import { exportVideo, formatFilename, mediaRecorderSupported, supportedFormats, ExportCancelled } from '../../lib/export';
+import { copyText, isEmbeddedFrame, openBlobInTab, saveBlob } from '../../lib/download';
 import { Icon } from '../Icons';
 import type { TKey } from '../../i18n/en';
 
@@ -26,8 +27,10 @@ export function ExportDialog() {
 
   const [phase, setPhase] = useState<Phase>('config');
   const [progress, setProgress] = useState({ percent: 0, time: 0, total: 0 });
-  const [result, setResult] = useState<{ url: string; ext: string; size: number; duration: number } | null>(null);
+  const [result, setResult] = useState<{ url: string; blob: Blob; ext: string; size: number; duration: number } | null>(null);
   const [error, setError] = useState<string>('');
+  const [saving, setSaving] = useState(false);
+  const [saveHint, setSaveHint] = useState<string>('');
   const abortRef = useRef<AbortController | null>(null);
   const lastPct = useRef(-1);
 
@@ -124,7 +127,7 @@ export function ExportDialog() {
           }
         },
       });
-      setResult({ url: res.url, ext: res.ext, size: res.blob.size, duration: res.duration });
+      setResult({ url: res.url, blob: res.blob, ext: res.ext, size: res.blob.size, duration: res.duration });
       setPhase('done');
       setExporting(false);
       toast('success', t('toast.exportDone'));
@@ -140,6 +143,47 @@ export function ExportDialog() {
     } finally {
       abortRef.current = null;
     }
+  };
+
+  const filename = formatFilename(opts.filename, result?.ext ?? ext);
+
+  const save = async () => {
+    if (!result) return;
+    setSaving(true);
+    setSaveHint('');
+    try {
+      const method = await saveBlob(result.blob, filename);
+      if (method === 'cancelled') {
+        setSaveHint(t('export.save.cancelled'));
+      } else if (method === 'picker') {
+        setSaveHint(t('export.save.saved'));
+        toast('success', t('export.save.saved'));
+      } else {
+        setSaveHint(t('export.save.started'));
+        setTimeout(() => {
+          setSaveHint((prev) => (prev === t('export.save.started') ? t('export.save.ifNothing') : prev));
+        }, 1600);
+      }
+    } catch {
+      setSaveHint(t('export.save.blocked'));
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const retryLighter = () => {
+    setOpts({ width: 1280, height: 720, fps: 24, includeAudio: false, format: 'webm', quality: 'medium' });
+    setError('');
+    setPhase('config');
+    toast('info', t('export.lighterReady'));
+  };
+
+  const errorHints: Record<string, string> = {
+    unsupported: t('export.hint.unsupported'),
+    'format-unsupported': t('export.hint.unsupported'),
+    'empty-project': t('export.hint.empty'),
+    'empty-recording': t('export.hint.emptyRecording'),
+    'recorder-error': t('export.hint.recorder'),
   };
 
   if (!project) return null;
@@ -189,10 +233,9 @@ export function ExportDialog() {
             <Button variant="secondary" icon="refresh" onClick={() => setPhase('config')}>
               {t('export.newExport')}
             </Button>
-            <a className="btn btn-primary btn-md" href={result?.url} download={formatFilename(opts.filename, result?.ext ?? ext)}>
-              <Icon name="download" size={17} />
-              <span className="btn-label">{t('export.download')}</span>
-            </a>
+            <Button variant="primary" icon="download" loading={saving} onClick={() => void save()}>
+              {t('export.download')}
+            </Button>
           </>
         ) : (
           <>
@@ -405,18 +448,29 @@ export function ExportDialog() {
             </div>
           </div>
           <div className="export-done-actions">
-            <a className="btn btn-primary btn-md" href={result.url} download={formatFilename(opts.filename, result.ext)}>
-              <Icon name="download" size={17} />
-              <span className="btn-label">{t('export.download')}</span>
-            </a>
-            <a className="btn btn-secondary btn-md" href={result.url} target="_blank" rel="noreferrer">
-              <Icon name="external" size={17} />
-              <span className="btn-label">{t('export.openAfter')}</span>
-            </a>
+            <Button variant="primary" icon="download" loading={saving} onClick={() => void save()}>
+              {t('export.download')}
+            </Button>
+            <Button
+              variant="secondary"
+              icon="external"
+              onClick={() => {
+                const win = openBlobInTab(result.blob);
+                if (!win) setSaveHint(t('export.save.popupBlocked'));
+              }}
+            >
+              {t('export.openAfter')}
+            </Button>
+            <Button variant="ghost" icon="share" onClick={() => void copyText(result.url).then((ok) => setSaveHint(ok ? t('export.save.copied') : t('export.save.blocked')))}>
+              {t('export.copyLink')}
+            </Button>
             <Button variant="ghost" icon="folder" onClick={() => void saveNow()}>
               {t('export.saveProject')}
             </Button>
           </div>
+          {saveHint ? <Note kind="info">{saveHint}</Note> : null}
+          {isEmbeddedFrame() ? <Note kind="warn">{t('export.save.embedded')}</Note> : null}
+          <p className="export-filename mono">{filename}</p>
           <Note kind="cap" title={t('export.share')}>
             {t('export.shareNote')}
           </Note>
@@ -427,14 +481,20 @@ export function ExportDialog() {
         <div className="export-error">
           <Note kind="error" title={t('export.error')}>
             {t('export.errorDesc')}
+            {errorHints[error] ? <p className="export-hint">{errorHints[error]}</p> : null}
+            <div className="note-actions">
+              <Button size="sm" variant="primary" icon="refresh" onClick={retryLighter}>
+                {t('export.retryLighter')}
+              </Button>
+              <Button size="sm" variant="secondary" icon="save" onClick={() => void downloadBackup()}>
+                {t('export.saveOnly')}
+              </Button>
+            </div>
             <details>
               <summary>{t('error.details')}</summary>
               <pre>{error}</pre>
             </details>
           </Note>
-          <Button variant="secondary" icon="folder" onClick={() => void downloadBackup()}>
-            {t('export.saveOnly')}
-          </Button>
         </div>
       ) : null}
     </Modal>

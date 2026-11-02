@@ -55,6 +55,22 @@ export function AudioPanel() {
     setMics(await listMicrophones());
   };
 
+  useEffect(() => {
+    const focus = () => {
+      const el = document.querySelector('[data-voiceover-target]') as HTMLElement | null;
+      if (!el) return;
+      el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      el.classList.remove('is-flash');
+      // restart the highlight animation
+      void el.offsetWidth;
+      el.classList.add('is-flash');
+      const btn = el.querySelector('.rec-btn') as HTMLElement | null;
+      btn?.focus({ preventScroll: true });
+    };
+    window.addEventListener('editez:focus-voiceover', focus);
+    return () => window.removeEventListener('editez:focus-voiceover', focus);
+  }, []);
+
   const startRecording = async () => {
     setMicError(null);
     await resumeAudio();
@@ -165,7 +181,7 @@ export function AudioPanel() {
       </div>
 
       <div className="panel-scroll">
-        <section className="panel-section voice-section">
+        <section className="panel-section voice-section" id="voice-section" data-voiceover-target>
           <div className="panel-section-head">
             <h3>{t('audio.voiceover')}</h3>
           </div>

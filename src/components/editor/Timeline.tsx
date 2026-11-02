@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useStore } from '../../store';
+import { EFFECTS } from '../../lib/presets';
 import { useT } from '../../i18n';
 import { Icon, type IconName } from '../Icons';
 import { IconButton, Tip, useConfirm } from '../ui';
@@ -156,6 +157,23 @@ function ClipView({
           ) : null}
         </span>
       </span>
+      {width > 44
+        ? (() => {
+            const times = new Set<number>();
+            for (const frames of Object.values(clip.keyframes)) {
+              frames?.forEach((f) => times.add(f.t));
+            }
+            if (!times.size) return null;
+            return [...times].map((time, i) => (
+              <span
+                key={`kf-${i}`}
+                className="clip-kf"
+                style={{ left: `${clamp(time / Math.max(0.001, clip.duration), 0, 1) * 100}%` }}
+                aria-hidden="true"
+              />
+            ));
+          })()
+        : null}
       {clip.transitionIn && clip.transitionIn.type !== 'none' ? (
         <span className="clip-trans clip-trans-in" title={t('props.transition.in')} />
       ) : null}
@@ -498,6 +516,7 @@ export function Timeline() {
 
   const allClips = project.tracks.flatMap((tr) => tr.clips);
   const selectedClip = selection.length === 1 ? allClips.find((c) => c.id === selection[0]) : null;
+  const selectedFx = selectedClip?.effects ?? [];
 
   const patchClip = (id: string, fn: (c: Clip) => void) => {
     useStore.getState().mutate((p) => {
@@ -603,6 +622,16 @@ export function Timeline() {
               <Icon name="marker" size={16} />
             </button>
           </Tip>
+          <Tip label={`${t('timeline.keyframe')} — ${t('timeline.keyframeHint')}`} shortcut="K">
+            <button
+              type="button"
+              className="tl-tool tl-tool-kf"
+              disabled={!selectedClip}
+              onClick={() => useStore.getState().addKeyframesHere()}
+            >
+              <Icon name="keyframe" size={16} />
+            </button>
+          </Tip>
           <Tip label={t('timeline.addTrack')}>
             <button
               type="button"
@@ -651,6 +680,45 @@ export function Timeline() {
             }}
           />
         </div>
+      </div>
+
+      <div className="tl-fx-strip" aria-label={t('timeline.fx')}>
+        <span className="tl-fx-title">
+          <Icon name="sparkles" size={13} />
+          {t('timeline.fx')}
+        </span>
+        <div className="tl-fx-chips">
+          {selectedClip ? (
+            selectedFx.length ? (
+              selectedFx.map((fx) => {
+                const def = EFFECTS.find((d) => d.type === fx.type);
+                return (
+                  <button
+                    key={fx.id}
+                    type="button"
+                    className={`tl-fx-chip ${fx.enabled ? '' : 'is-off'}`}
+                    title={def ? t(def.label) : fx.type}
+                    onClick={() => useStore.getState().setPanel('effects')}
+                  >
+                    <span className="tl-fx-dot" />
+                    {def ? t(def.label) : fx.type}
+                  </button>
+                );
+              })
+            ) : (
+              <span className="tl-fx-empty">{t('timeline.fxNone')}</span>
+            )
+          ) : (
+            <span className="tl-fx-empty">{t('timeline.fxNone')}</span>
+          )}
+        </div>
+        <span className="tl-spacer" />
+        {selectedClip ? (
+          <button type="button" className="tl-fx-add" onClick={() => useStore.getState().setPanel('effects')} title={t('timeline.fxOpen')}>
+            <Icon name="plus" size={12} />
+            {t('timeline.fxAdd')}
+          </button>
+        ) : null}
       </div>
 
       <div className={`tl-main ${dragActive ? 'is-dragging' : ''}`}>

@@ -104,7 +104,7 @@ export async function exportVideo(req: ExportRequest): Promise<ExportResult> {
   let finished = false;
 
   const cleanup = () => {
-    cancelAnimationFrame(raf);
+    if (raf) window.clearTimeout(raf);
     compositor.pauseAll();
     try {
       compositor.audio.releaseExportStream();
@@ -124,8 +124,12 @@ export async function exportVideo(req: ExportRequest): Promise<ExportResult> {
 
     const stream = canvas.captureStream(req.fps);
     if (includeAudio) {
-      const audioStream = compositor.audio.createExportStream();
-      if (audioStream) for (const track of audioStream.getAudioTracks()) stream.addTrack(track);
+      try {
+        const audioStream = compositor.audio.createExportStream();
+        if (audioStream) for (const track of audioStream.getAudioTracks()) stream.addTrack(track);
+      } catch {
+        /* keep the export alive without audio rather than failing outright */
+      }
     }
 
     const mimeType = chosen.mime;
@@ -135,10 +139,20 @@ export async function exportVideo(req: ExportRequest): Promise<ExportResult> {
       audioBitsPerSecond: includeAudio ? 128_000 : undefined,
     });
     const chunks: Blob[] = [];
+    let recorderError: Error | null = null;
     const done = new Promise<Blob>((resolve) => {
       if (!recorder) return resolve(new Blob());
       recorder.ondataavailable = (e) => {
         if (e.data && e.data.size) chunks.push(e.data);
+      };
+      recorder.onerror = (event) => {
+        const err = (event as unknown as { error?: Error }).error;
+        recorderError = err ?? new Error('recorder-error');
+        try {
+          if (recorder && recorder.state !== 'inactive') recorder.stop();
+        } catch {
+          /* ignore */
+        }
       };
       recorder.onstop = () => resolve(new Blob(chunks, { type: mimeType }));
     });
@@ -147,7 +161,11 @@ export async function exportVideo(req: ExportRequest): Promise<ExportResult> {
     req.onStatus?.('rendering');
 
     const started = performance.now();
+    const frameMs = Math.max(16, Math.round(1000 / Math.max(12, req.fps)));
     await new Promise<void>((resolve, reject) => {
+      // setTimeout instead of requestAnimationFrame: rAF is throttled to ~1fps in
+      // background/offscreen frames (embedded previews), which used to produce a
+      // frozen or empty recording while the progress bar still moved.
       const tick = () => {
         if (req.signal?.aborted) {
           reject(new ExportCancelled());
@@ -171,9 +189,9 @@ export async function exportVideo(req: ExportRequest): Promise<ExportResult> {
           resolve();
           return;
         }
-        raf = requestAnimationFrame(tick);
+        raf = window.setTimeout(tick, frameMs);
       };
-      raf = requestAnimationFrame(tick);
+      tick();
     });
 
     finished = true;
@@ -184,6 +202,7 @@ export async function exportVideo(req: ExportRequest): Promise<ExportResult> {
     const blob = await done;
     compositor.pauseAll();
     req.onProgress?.({ percent: 100, time: duration, total: duration });
+    if (recorderError) throw recorderError;
     if (!blob.size) throw new Error('empty-recording');
     return {
       blob,

@@ -374,3 +374,19 @@
     display: none;
   }
 }
+
+/* --- dark theme: effects lane, keyframes, guide (v3) ------------------ */
+[data-theme='dark'] .tl-fx-strip {
+  background: linear-gradient(180deg, color-mix(in srgb, var(--accent) 12%, transparent), transparent);
+  border-bottom-color: var(--line);
+}
+[data-theme='dark'] .tl-fx-chip {
+  background: color-mix(in srgb, var(--accent) 18%, #101018);
+  border-color: color-mix(in srgb, var(--accent) 40%, #23232c);
+  color: #e8ecf5;
+}
+[data-theme='dark'] .guide-nav-item:hover { background: rgba(255, 255, 255, 0.06); }
+[data-theme='dark'] .guide-steps li { background: rgba(255, 255, 255, 0.035); border-color: #23232c; }
+[data-theme='dark'] .guide-tip { background: rgba(22, 197, 230, 0.12); border-color: rgba(22, 197, 230, 0.28); }
+[data-theme='dark'] .guide-nav-item.is-active { background: rgba(26, 140, 255, 0.18); }
+[data-theme='dark'] .tl-tool-kf { color: #ffd24a; }

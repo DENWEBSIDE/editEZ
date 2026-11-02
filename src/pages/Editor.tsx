@@ -202,6 +202,10 @@ export function Editor() {
         s.setTool('razor');
         return;
       }
+      if (key === 'k' && !mod) {
+        s.addKeyframesHere();
+        return;
+      }
       if (key === 'm' && !mod) {
         s.addMarker();
         return;
